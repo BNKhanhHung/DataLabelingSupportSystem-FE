@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đăng nhập - Data Labeling Support System</title>
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e293b 100%);
+    padding: 20px;
+}
+
+.login-wrapper {
+    width: 100%;
+    max-width: 420px;
+}
+
+.login-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    padding: 40px;
+}
+
+.logo {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.logo-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 16px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #22c55e, #0ea5e9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+}
+
+.logo h1 {
+    font-size: 22px;
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.logo p {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: #334155;
+    margin-bottom: 8px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #22c55e;
+    background: #fff;
+}
+
+.form-group input::placeholder {
+    color: #94a3b8;
+}
+
+.forgot-link {
+    display: block;
+    text-align: right;
+    font-size: 13px;
+    color: #0ea5e9;
+    text-decoration: none;
+    margin-top: 6px;
+    margin-bottom: 24px;
+}
+
+.forgot-link:hover {
+    text-decoration: underline;
+}
+
+.btn-login {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.05s;
+}
+
+.btn-login:hover {
+    opacity: 0.95;
+}
+
+.btn-login:active {
+    transform: scale(0.99);
+}
+
+.footer-text {
+    text-align: center;
+    margin-top: 24px;
+    font-size: 13px;
+    color: #94a3b8;
+}
+
+.error-msg {
+    font-size: 13px;
+    color: #dc2626;
+    margin-top: 8px;
+    display: none;
+}
+
+.error-msg.show {
+    display: block;
+}
+
+.btn-login:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+</style>
+</head>
+<body>
+
+<div class="login-wrapper">
+    <div class="login-card">
+        <div class="logo">
+            <div class="logo-icon">◇</div>
+            <h1>DL System</h1>
+            <p>Data Labeling Support System</p>
+        </div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Tên đăng nhập hoặc Email</label>
+                <input type="text" id="username" name="username" placeholder="Nhập tên đăng nhập hoặc email" required autocomplete="username">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Mật khẩu</label>
+                <input type="password" id="password" name="password" placeholder="Nhập mật khẩu" required autocomplete="current-password">
+                <span id="errorMsg" class="error-msg"></span>
+            </div>
+
+            <a href="#" class="forgot-link">Quên mật khẩu?</a>
+
+            <button type="submit" class="btn-login" id="btnLogin">Đăng nhập</button>
+        </form>
+
+        <p class="footer-text">Hệ thống gán nhãn dữ liệu cho AI/ML</p>
+    </div>
+</div>
+
+<script src="api-config.js"></script>
+<script>
+(function() {
+    var API_CONFIG = window.API_CONFIG || {
+        baseUrl: 'http://localhost:8080',
+        loginPath: '/api/auth/login'
+    };
+
+    var form = document.getElementById('loginForm');
+    var btnLogin = document.getElementById('btnLogin');
+    var errorMsg = document.getElementById('errorMsg');
+
+    function showError(message) {
+        errorMsg.textContent = message;
+        errorMsg.classList.add('show');
+    }
+
+    function hideError() {
+        errorMsg.textContent = '';
+        errorMsg.classList.remove('show');
+    }
+
+    function setLoading(loading) {
+        btnLogin.disabled = loading;
+        btnLogin.textContent = loading ? 'Đang đăng nhập...' : 'Đăng nhập';
+    }
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        var username = document.getElementById('username').value.trim();
+        var password = document.getElementById('password').value;
+
+        hideError();
+
+        if (!username) {
+            showError('Vui lòng nhập tên đăng nhập hoặc email.');
+            return;
+        }
+        if (password.length < 6) {
+            showError('Mật khẩu phải có ít nhất 6 ký tự.');
+            return;
+        }
+
+        var loginUrl = API_CONFIG.baseUrl + API_CONFIG.loginPath;
+        var payload = { usernameOrEmail: username, password: password };
+
+        setLoading(true);
+
+        fetch(loginUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(function(res) {
+            return res.json().then(function(data) {
+                return { ok: res.ok, status: res.status, data: data };
+            }).catch(function() {
+                return { ok: res.ok, status: res.status, data: { message: res.statusText } };
+            });
+        })
+        .then(function(result) {
+            if (result.ok) {
+                var data = result.data;
+                var token = data.token || data.accessToken || data.jwt;
+                if (token) {
+                    localStorage.setItem('token', token);
+                    if (data.userId) localStorage.setItem('userId', data.userId);
+                    if (data.username) localStorage.setItem('username', data.username);
+                    if (data.email) localStorage.setItem('userEmail', data.email);
+                    if (data.systemRole) localStorage.setItem('systemRole', data.systemRole);
+                }
+                var role = (data.systemRole || '').toUpperCase();
+                var redirectUrl = role === 'ADMIN' ? 'admin.html' : 'manager.html';
+                window.location.href = redirectUrl;
+            } else {
+                var msg = (result.data && (result.data.message || result.data.error)) || 'Đăng nhập thất bại. Vui lòng kiểm tra lại.';
+                showError(msg);
+            }
+        })
+        .catch(function(err) {
+            showError('Không kết nối được server. Kiểm tra Backend đã chạy tại ' + API_CONFIG.baseUrl + ' và CORS đã bật.');
+            console.error('Login error:', err);
+        })
+        .finally(function() {
+            setLoading(false);
+        });
+    });
+})();
+</script>
+
+</body>
+</html>
