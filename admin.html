@@ -393,17 +393,23 @@ tbody tr:hover {
         </div>
     </div>
     <ul class="sidebar-nav">
-        <li class="active">
+        <li class="active" onclick="window.location='admin.html'">
             <span class="label">
                 <span class="nav-dot"></span>
                 <span>Dashboard</span>
             </span>
             <span>●</span>
         </li>
-        <li>
+        <li onclick="window.location='user-management.html?from=admin'">
             <span class="label">
                 <span class="nav-dot"></span>
                 <span>Quản lý người dùng</span>
+            </span>
+        </li>
+        <li onclick="window.location='index.html'">
+            <span class="label">
+                <span class="nav-dot"></span>
+                <span>Về trang chủ</span>
             </span>
         </li>
         <li>
@@ -442,13 +448,14 @@ tbody tr:hover {
                 <span class="search-icon"></span>
                 <input type="text" placeholder="Tìm kiếm người dùng, email, vai trò...">
             </div>
-            <div class="user-pill">
+            <div class="user-pill" id="userPill">
                 <div class="user-avatar"></div>
                 <div class="user-meta">
-                    <span>Super Admin</span>
-                    <span>admin@dlss.local</span>
+                    <span id="headerUsername">--</span>
+                    <span id="headerEmail">--</span>
                 </div>
             </div>
+            <a href="login.html" style="margin-left:8px;color:#94a3b8;font-size:13px;" onclick="localStorage.clear();">Thoát</a>
         </div>
     </div>
 
@@ -456,15 +463,15 @@ tbody tr:hover {
         <div class="card">
             <div class="card-content">
                 <div class="card-label">Tổng người dùng</div>
-                <div class="card-value">35</div>
-                <div class="card-trend">+4 tài khoản mới tuần này</div>
+                <div class="card-value" id="cardUsers">--</div>
+                <div class="card-trend" id="cardUsersSub">Đang tải...</div>
             </div>
         </div>
         <div class="card">
             <div class="card-content">
                 <div class="card-label">Tổng dự án</div>
-                <div class="card-value">12</div>
-                <div class="card-trend">3 dự án mới được tạo</div>
+                <div class="card-value" id="cardProjects">--</div>
+                <div class="card-trend" id="cardProjectsSub">Đang tải...</div>
             </div>
         </div>
         <div class="card">
@@ -487,9 +494,9 @@ tbody tr:hover {
         <div class="table-header">
             <div>
                 <h2>Danh sách người dùng</h2>
-                <span>Quản lý tài khoản và phân quyền trong hệ thống</span>
+                <span>Quản lý tài khoản và phân quyền trong hệ thống · <a href="user-management.html?from=admin" style="color:#38bdf8;">Quản lý người dùng</a></span>
             </div>
-            <span style="font-size:12px;color:#6b7280;">4 / 35 hiển thị</span>
+            <span style="font-size:12px;color:#6b7280;" id="tableCount">Đang tải...</span>
         </div>
         <table>
             <thead>
@@ -500,36 +507,69 @@ tbody tr:hover {
                     <th>Trạng thái</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr>
-                    <td>Minh Thu</td>
-                    <td>minhthu@gmail.com</td>
-                    <td><span class="role admin">Admin</span></td>
-                    <td><span class="status-pill status-active">Hoạt động</span></td>
-                </tr>
-                <tr>
-                    <td>Phat Dat</td>
-                    <td>phatdat@gmail.com</td>
-                    <td><span class="role manager">Manager</span></td>
-                    <td><span class="status-pill status-active">Hoạt động</span></td>
-                </tr>
-                <tr>
-                    <td>Nguyen Van A</td>
-                    <td>annotator@gmail.com</td>
-                    <td><span class="role annotator">Annotator</span></td>
-                    <td><span class="status-pill status-locked">Tạm khóa</span></td>
-                </tr>
-                <tr>
-                    <td>Tran Thi B</td>
-                    <td>reviewer@gmail.com</td>
-                    <td><span class="role reviewer">Reviewer</span></td>
-                    <td><span class="status-pill status-active">Hoạt động</span></td>
-                </tr>
+            <tbody id="usersTableBody">
+                <tr><td colspan="4">Đang tải...</td></tr>
             </tbody>
         </table>
     </div>
 
 </div>
 
+<script src="api-config.js"></script>
+<script src="api-helper.js"></script>
+<script>
+(function() {
+    var API = window.API;
+    var cfg = window.API_CONFIG;
+    if (!API || !API.requireAuth()) return;
+    var role = (localStorage.getItem('systemRole') || '').toUpperCase();
+    if (role !== 'ADMIN' && role !== 'MANAGER') {
+        window.location.href = 'user-dashboard.html';
+        return;
+    }
+
+    function roleClass(r) {
+        var s = (r || '').toUpperCase();
+        if (s === 'ADMIN') return 'admin';
+        if (s === 'MANAGER') return 'manager';
+        return 'annotator';
+    }
+    function statusClass(s) {
+        return (s || '').toUpperCase() === 'ACTIVE' ? 'status-active' : 'status-locked';
+    }
+
+    API.fetchWithAuth(cfg.users + '/me').then(function(r) { return r.json(); }).then(function(me) {
+        document.getElementById('headerUsername').textContent = me.username || '--';
+        document.getElementById('headerEmail').textContent = me.email || '--';
+    }).catch(function() {});
+
+    API.fetchWithAuth(cfg.users + '?page=0&size=100').then(function(r) { return r.json(); }).then(function(data) {
+        var list = data.content || [];
+        document.getElementById('cardUsers').textContent = data.totalElements !== undefined ? data.totalElements : list.length;
+        document.getElementById('cardUsersSub').textContent = list.length + ' người dùng trong trang này';
+        var tbody = document.getElementById('usersTableBody');
+        document.getElementById('tableCount').textContent = list.length + (data.totalElements !== undefined ? ' / ' + data.totalElements : '') + ' hiển thị';
+        if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4">Chưa có người dùng.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = list.map(function(u) {
+            var r = u.systemRole || 'USER';
+            var st = u.status || 'ACTIVE';
+            return '<tr><td>' + (u.username || '') + '</td><td>' + (u.email || '') + '</td><td><span class="role ' + roleClass(r) + '">' + r + '</span></td><td><span class="status-pill ' + statusClass(st) + '">' + st + '</span></td></tr>';
+        }).join('');
+    }).catch(function(err) {
+        document.getElementById('usersTableBody').innerHTML = '<tr><td colspan="4">Lỗi tải danh sách: ' + (err.message || '') + '</td></tr>';
+        document.getElementById('cardUsers').textContent = '0';
+    });
+
+    API.fetchWithAuth(cfg.projects + '?page=0&size=1').then(function(r) { return r.json(); }).then(function(data) {
+        document.getElementById('cardProjects').textContent = data.totalElements !== undefined ? data.totalElements : '0';
+        document.getElementById('cardProjectsSub').textContent = 'Dự án trong hệ thống';
+    }).catch(function() {
+        document.getElementById('cardProjects').textContent = '0';
+    });
+})();
+</script>
 </body>
 </html>

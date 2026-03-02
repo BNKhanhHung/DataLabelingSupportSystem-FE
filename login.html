@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đăng nhập - Data Labeling Support System</title>
+<script>
+(function() {
+    var token = localStorage.getItem('token');
+    if (token) {
+        var systemRole = (localStorage.getItem('systemRole') || '').toUpperCase();
+        if (systemRole === 'ADMIN') window.location.replace('admin.html');
+        else if (systemRole === 'MANAGER') window.location.replace('manager.html');
+        else window.location.replace('user-dashboard.html');
+    }
+})();
+</script>
 <style>
 * {
     margin: 0;
@@ -254,13 +265,13 @@ body {
                 var token = data.token || data.accessToken || data.jwt;
                 if (token) {
                     localStorage.setItem('token', token);
-                    if (data.userId) localStorage.setItem('userId', data.userId);
+                    if (data.userId) localStorage.setItem('userId', String(data.userId));
                     if (data.username) localStorage.setItem('username', data.username);
                     if (data.email) localStorage.setItem('userEmail', data.email);
                     if (data.systemRole) localStorage.setItem('systemRole', data.systemRole);
                 }
                 var role = (data.systemRole || '').toUpperCase();
-                var redirectUrl = role === 'ADMIN' ? 'admin.html' : 'manager.html';
+                var redirectUrl = role === 'ADMIN' ? 'admin.html' : (role === 'MANAGER' ? 'manager.html' : 'user-dashboard.html');
                 window.location.href = redirectUrl;
             } else {
                 var msg = (result.data && (result.data.message || result.data.error)) || 'Đăng nhập thất bại. Vui lòng kiểm tra lại.';

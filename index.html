@@ -6,15 +6,7 @@
 <title>Data Labeling Support System</title>
 <script>
 (function() {
-    var token = localStorage.getItem('token');
-    var systemRole = (localStorage.getItem('systemRole') || '').toUpperCase();
-    if (token && systemRole === 'ADMIN') {
-        window.location.replace('admin.html');
-    } else if (token) {
-        window.location.replace('manager.html');
-    } else {
-        window.location.replace('login.html');
-    }
+    window.location.replace('login.html');
 })();
 </script>
 </head>

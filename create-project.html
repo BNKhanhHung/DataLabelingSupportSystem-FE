@@ -1,34 +1,66 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-<title>Tạo Project</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tạo Project - Data Labeling</title>
 <style>
 body{font-family:sans-serif;background:#0f172a;color:white;padding:40px}
-input,select,textarea{width:100%;padding:10px;margin:10px 0;border-radius:6px;border:none}
+input,textarea{width:100%;padding:10px;margin:10px 0;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0}
 button{padding:10px 20px;background:#22c55e;border:none;color:white;border-radius:6px;cursor:pointer}
+button:disabled{opacity:0.6;cursor:not-allowed}
 .card{background:#1e293b;padding:30px;border-radius:12px;max-width:600px}
+a{color:#38bdf8}
+#msg{margin-top:12px;font-size:14px}
 </style>
 </head>
 <body>
 
 <div class="card">
 <h2>Tạo Project Mới</h2>
-
-<label>Tên Project</label>
-<input type="text" placeholder="Nhập tên project">
-
-<label>Loại dữ liệu</label>
-<select>
-<option>Image</option>
-<option>Text</option>
-<option>Audio</option>
-</select>
-
-<label>Mô tả</label>
-<textarea rows="4"></textarea>
-
-<button>Tạo Project</button>
+<form id="form">
+  <label>Tên Project *</label>
+  <input type="text" id="name" placeholder="Nhập tên project" required>
+  <label>Mô tả</label>
+  <textarea id="description" rows="4" placeholder="Mô tả dự án"></textarea>
+  <button type="submit" id="btn">Tạo Project</button>
+  <a href="manager.html">← Quay lại Manager</a>
+</form>
+<p id="msg"></p>
 </div>
 
+<script src="api-config.js"></script>
+<script src="api-helper.js"></script>
+<script>
+(function() {
+  var API = window.API;
+  var cfg = window.API_CONFIG;
+  if (!API || !API.requireAuth()) return;
+  var form = document.getElementById('form');
+  var btn = document.getElementById('btn');
+  var msg = document.getElementById('msg');
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    var name = document.getElementById('name').value.trim();
+    if (!name) { msg.textContent = 'Vui lòng nhập tên project.'; msg.style.color = '#f87171'; return; }
+    btn.disabled = true;
+    msg.textContent = 'Đang tạo...';
+    msg.style.color = '#94a3b8';
+    API.fetchWithAuth(cfg.projects, {
+      method: 'POST',
+      body: JSON.stringify({ name: name, description: document.getElementById('description').value.trim() || '' })
+    }).then(function(r) { return r.json(); }).then(function() {
+      msg.textContent = 'Tạo project thành công.';
+      msg.style.color = '#4ade80';
+      document.getElementById('name').value = '';
+      document.getElementById('description').value = '';
+      setTimeout(function() { window.location.href = 'manager.html'; }, 1500);
+    }).catch(function(err) {
+      msg.textContent = 'Lỗi: ' + (err.message || 'Tạo thất bại');
+      msg.style.color = '#f87171';
+    }).finally(function() { btn.disabled = false; });
+  });
+})();
+</script>
 </body>
 </html>

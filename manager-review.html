@@ -1,22 +1,55 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-<title>Nhận dữ liệu đã gắn nhãn</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Review & chất lượng - Data Labeling</title>
 <style>
 body{font-family:sans-serif;background:#0f172a;color:white;padding:40px}
-.card{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:10px}
-button{padding:6px 12px;background:#22c55e;border:none;color:white;border-radius:6px}
+.card{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:16px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;border-bottom:1px solid #334155}
+a{color:#38bdf8}
 </style>
 </head>
 <body>
 
-<h2>Dữ liệu đã hoàn thành</h2>
-
+<a href="manager.html">← Manager</a>
+<h2>Review & chất lượng</h2>
+<p id="msg">Đang tải...</p>
 <div class="card">
-<p>Project: Labeling Ảnh</p>
-<p>Annotator: Nguyen Van A</p>
-<button>Xem chi tiết</button>
+  <h3>Danh sách review feedbacks</h3>
+  <table>
+    <thead><tr><th>ID</th><th>TaskItemId</th><th>Status</th><th>Content (rút gọn)</th></tr></thead>
+    <tbody id="tbody">
+      <tr><td colspan="4">Đang tải...</td></tr>
+    </tbody>
+  </table>
 </div>
 
+<script src="api-config.js"></script>
+<script src="api-helper.js"></script>
+<script>
+(function() {
+  var API = window.API;
+  var cfg = window.API_CONFIG;
+  if (!API || !API.requireAuth()) return;
+  API.fetchWithAuth(cfg.reviewFeedbacks + '?page=0&size=50').then(function(r) { return r.json(); }).then(function(data) {
+    var list = data.content || [];
+    document.getElementById('msg').textContent = 'Tổng: ' + (data.totalElements !== undefined ? data.totalElements : list.length) + ' feedback.';
+    var tbody = document.getElementById('tbody');
+    if (list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4">Chưa có review nào.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map(function(r) {
+      return '<tr><td>' + (r.id || '').substring(0, 8) + '</td><td>' + (r.taskItemId || '').substring(0, 8) + '...</td><td>' + (r.status || '') + '</td><td>' + (r.content || '').substring(0, 50) + '</td></tr>';
+    }).join('');
+  }).catch(function(err) {
+    document.getElementById('msg').textContent = 'Lỗi: ' + (err.message || '');
+    document.getElementById('tbody').innerHTML = '<tr><td colspan="4">Lỗi tải.</td></tr>';
+  });
+})();
+</script>
 </body>
 </html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard - Data Labeling</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+body { display: flex; min-height: 100vh; background: radial-gradient(circle at top left, #4f46e5 0, #020617 45%, #020617 100%); color: #0f172a; }
+.sidebar { width: 260px; background: rgba(15, 23, 42, 0.98); color: white; padding: 20px 18px; display: flex; flex-direction: column; border-right: 1px solid rgba(148, 163, 184, 0.2); }
+.sidebar-header { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
+.sidebar-logo { width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, #22c55e, #0ea5e9); }
+.sidebar-title { display: flex; flex-direction: column; }
+.sidebar-title span:first-child { font-weight: 600; letter-spacing: 0.04em; font-size: 14px; text-transform: uppercase; }
+.sidebar-title span:last-child { font-size: 12px; color: #9ca3af; }
+.sidebar-nav { list-style: none; flex: 1; }
+.sidebar-nav li { padding: 10px 12px; border-radius: 10px; margin-bottom: 6px; cursor: pointer; font-size: 14px; color: #e5e7eb; display: flex; align-items: center; justify-content: space-between; transition: background 0.15s, transform 0.1s; }
+.sidebar-nav li span.label { display: flex; align-items: center; gap: 8px; }
+.nav-dot { width: 6px; height: 6px; border-radius: 999px; background: transparent; }
+.sidebar-nav li.active .nav-dot { background: #22c55e; }
+.sidebar-nav li.active { background: linear-gradient(135deg, rgba(79, 70, 229, 0.9), rgba(99, 102, 241, 0.9)); }
+.sidebar-nav li:hover { background: rgba(55, 65, 81, 0.9); transform: translateY(-1px); }
+.sidebar-footer { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(148, 163, 184, 0.25); font-size: 12px; color: #9ca3af; }
+.main { flex: 1; padding: 20px 28px; display: flex; flex-direction: column; gap: 18px; background: radial-gradient(circle at top left, rgba(99, 102, 241, 0.2) 0, rgba(15, 23, 42, 0.02) 40%, #020617 100%); }
+.header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.header-left h1 { font-size: 24px; color: #f9fafb; margin-bottom: 4px; }
+.header-left p { font-size: 13px; color: #9ca3af; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.user-pill { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 999px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(148, 163, 184, 0.6); color: #e5e7eb; font-size: 13px; }
+.user-avatar { width: 26px; height: 26px; border-radius: 999px; background: linear-gradient(135deg, #22c55e, #0ea5e9); }
+.user-meta span { display: block; line-height: 1.2; }
+.user-meta span:first-child { font-size: 12px; }
+.user-meta span:last-child { font-size: 11px; color: #9ca3af; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; }
+.card { background: rgba(15, 23, 42, 0.9); padding: 18px 18px 16px; border-radius: 14px; border: 1px solid rgba(148, 163, 184, 0.45); box-shadow: 0 18px 40px rgba(15, 23, 42, 0.65); position: relative; overflow: hidden; }
+.card::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.4), transparent 55%); opacity: 0.85; pointer-events: none; }
+.card-content { position: relative; z-index: 1; }
+.card-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #9ca3af; margin-bottom: 10px; }
+.card-value { font-size: 24px; font-weight: 600; color: #f9fafb; margin-bottom: 6px; }
+.card-sub { font-size: 11px; color: #a5b4fc; }
+.table-container { background: rgba(15, 23, 42, 0.96); padding: 18px; border-radius: 16px; border: 1px solid rgba(148, 163, 184, 0.5); margin-top: 6px; }
+.table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.table-header h2 { font-size: 16px; color: #e5e7eb; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 10px 6px; text-align: left; font-size: 13px; color: #e5e7eb; border-bottom: 1px solid #334155; }
+th { font-weight: 500; color: #9ca3af; }
+tbody tr:hover { background: rgba(15, 23, 42, 0.9); }
+a.link-btn { color: #38bdf8; text-decoration: none; }
+a.link-btn:hover { text-decoration: underline; }
+.logout-link { color: #f87171; font-size: 13px; cursor: pointer; }
+.logout-link:hover { text-decoration: underline; }
+@media (max-width: 900px) { .sidebar { display: none; } .main { padding: 16px; } .header { flex-direction: column; align-items: flex-start; } }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo"></div>
+    <div class="sidebar-title">
+      <span>DLSS User</span>
+      <span>Task & cá nhân</span>
+    </div>
+  </div>
+  <ul class="sidebar-nav">
+    <li class="active" onclick="window.location='user-dashboard.html'">
+      <span class="label"><span class="nav-dot"></span><span>Dashboard</span></span>
+      <span>●</span>
+    </li>
+    <li onclick="window.location='my-profile.html'">
+      <span class="label"><span class="nav-dot"></span><span>Thông tin của tôi</span></span>
+    </li>
+    <li onclick="window.location='annotator-tasks.html'">
+      <span class="label"><span class="nav-dot"></span><span>Task được giao</span></span>
+    </li>
+    <li onclick="window.location='change-password.html'">
+      <span class="label"><span class="nav-dot"></span><span>Đổi mật khẩu</span></span>
+    </li>
+    <li id="logoutLi">
+      <span class="label"><span class="nav-dot"></span><span>Đăng xuất</span></span>
+    </li>
+  </ul>
+  <div class="sidebar-footer">User view · Data Labeling Support System</div>
+</div>
+
+<div class="main">
+  <div class="header">
+    <div class="header-left">
+      <h1>Dashboard của tôi</h1>
+      <p>Xem task được giao và quản lý tài khoản</p>
+    </div>
+    <div class="header-right">
+      <div class="user-pill" id="userPill">
+        <div class="user-avatar"></div>
+        <div class="user-meta">
+          <span id="headerUsername">--</span>
+          <span id="headerEmail">--</span>
+        </div>
+      </div>
+      <span class="logout-link" id="logoutBtn">Đăng xuất</span>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-content">
+        <div class="card-label">Task được giao</div>
+        <div class="card-value" id="cardTaskCount">--</div>
+        <div class="card-sub"><a href="annotator-tasks.html" class="link-btn">Xem danh sách task →</a></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-content">
+        <div class="card-label">Tài khoản</div>
+        <div class="card-value" id="cardUsername">--</div>
+        <div class="card-sub"><a href="change-password.html" class="link-btn">Đổi mật khẩu</a></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <div class="table-header">
+      <h2>Task gần đây</h2>
+      <a href="annotator-tasks.html" class="link-btn">Xem tất cả</a>
+    </div>
+    <table>
+      <thead><tr><th>Dự án</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+      <tbody id="taskTableBody">
+        <tr><td colspan="3">Đang tải...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script src="api-config.js"></script>
+<script src="api-helper.js"></script>
+<script>
+(function() {
+  var API = window.API;
+  var cfg = window.API_CONFIG;
+  if (!API || !API.requireAuth()) return;
+  var role = (localStorage.getItem('systemRole') || '').toUpperCase();
+  if (role === 'ADMIN' || role === 'MANAGER') {
+    window.location.href = role === 'ADMIN' ? 'admin.html' : 'manager.html';
+    return;
+  }
+
+  function logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('username');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('systemRole');
+    window.location.href = 'login.html';
+  }
+  document.getElementById('logoutBtn').addEventListener('click', logout);
+  document.getElementById('logoutLi').addEventListener('click', logout);
+
+  API.fetchWithAuth(cfg.users + '/me').then(function(r) { return r.json(); }).then(function(me) {
+    document.getElementById('headerUsername').textContent = me.username || '--';
+    document.getElementById('headerEmail').textContent = me.email || '--';
+    document.getElementById('cardUsername').textContent = me.username || '--';
+  }).catch(function() {});
+
+  var userId = localStorage.getItem('userId');
+  if (userId) {
+    API.fetchWithAuth(cfg.tasks + '/annotator/' + userId + '?page=0&size=20').then(function(r) { return r.json(); }).then(function(data) {
+      var list = data.content || [];
+      var total = data.totalElements !== undefined ? data.totalElements : list.length;
+      document.getElementById('cardTaskCount').textContent = total;
+      var tbody = document.getElementById('taskTableBody');
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3">Chưa có task nào được giao.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.slice(0, 5).map(function(t) {
+        return '<tr><td>' + (t.projectName || '') + '</td><td>' + (t.status || '') + '</td><td><a href="annotator-label.html?taskId=' + t.id + '" class="link-btn">Gắn nhãn</a></td></tr>';
+      }).join('');
+    }).catch(function() {
+      document.getElementById('cardTaskCount').textContent = '0';
+      document.getElementById('taskTableBody').innerHTML = '<tr><td colspan="3">Không tải được task.</td></tr>';
+    });
+  } else {
+    document.getElementById('cardTaskCount').textContent = '0';
+  }
+})();
+</script>
+</body>
+</html>

@@ -398,35 +398,47 @@ tbody tr:hover {
         </div>
     </div>
     <ul class="sidebar-nav">
-        <li class="active">
+        <li class="active" onclick="window.location='manager.html'">
             <span class="label">
                 <span class="nav-dot"></span>
                 <span>Dashboard</span>
             </span>
             <span>●</span>
         </li>
-        <li>
+        <li onclick="window.location='user-management.html?from=manager'">
             <span class="label">
                 <span class="nav-dot"></span>
-                <span>Dự án</span>
+                <span>Quản lý người dùng</span>
             </span>
         </li>
-        <li>
+        <li onclick="window.location='create-project.html'">
             <span class="label">
                 <span class="nav-dot"></span>
-                <span>Tiến độ Annotator</span>
+                <span>Tạo dự án</span>
             </span>
         </li>
-        <li>
+        <li onclick="window.location='assign-task.html'">
             <span class="label">
                 <span class="nav-dot"></span>
-                <span>Báo cáo & chất lượng</span>
+                <span>Phân công Task</span>
             </span>
         </li>
-        <li>
+        <li onclick="window.location='manager-review.html'">
             <span class="label">
                 <span class="nav-dot"></span>
-                <span>Cấu hình team</span>
+                <span>Review & chất lượng</span>
+            </span>
+        </li>
+        <li onclick="window.location='export-data.html'">
+            <span class="label">
+                <span class="nav-dot"></span>
+                <span>Xuất dữ liệu</span>
+            </span>
+        </li>
+        <li onclick="window.location='index.html'">
+            <span class="label">
+                <span class="nav-dot"></span>
+                <span>Về trang chủ</span>
             </span>
         </li>
     </ul>
@@ -448,13 +460,14 @@ tbody tr:hover {
                 <button>Đang chạy</button>
                 <button>Chậm tiến độ</button>
             </div>
-            <div class="user-pill">
+            <div class="user-pill" id="userPill">
                 <div class="user-avatar"></div>
                 <div class="user-meta">
-                    <span>Project Manager</span>
-                    <span>manager@dlss.local</span>
+                    <span id="headerUsername">--</span>
+                    <span id="headerEmail">--</span>
                 </div>
             </div>
+            <a href="login.html" style="margin-left:8px;color:#94a3b8;font-size:13px;" onclick="localStorage.clear();">Thoát</a>
         </div>
     </div>
 
@@ -462,29 +475,29 @@ tbody tr:hover {
         <div class="card">
             <div class="card-content">
                 <div class="card-label">Tổng dự án</div>
-                <div class="card-value">12</div>
-                <div class="card-sub">5 đang chạy · 3 chuẩn bị khởi tạo</div>
+                <div class="card-value" id="cardProjects">--</div>
+                <div class="card-sub" id="cardProjectsSub">Đang tải...</div>
             </div>
         </div>
         <div class="card">
             <div class="card-content">
-                <div class="card-label">Task chưa gán</div>
-                <div class="card-value">184</div>
-                <div class="card-sub orange">Ưu tiên phân bổ cho annotator online</div>
+                <div class="card-label">Tổng task</div>
+                <div class="card-value" id="cardTasks">--</div>
+                <div class="card-sub orange" id="cardTasksSub">Đang tải...</div>
             </div>
         </div>
         <div class="card">
             <div class="card-content">
-                <div class="card-label">Annotator đang online</div>
-                <div class="card-value">18</div>
-                <div class="card-sub">4 nhóm đang hoạt động</div>
+                <div class="card-label">Manager</div>
+                <div class="card-value" id="cardUser">--</div>
+                <div class="card-sub">Tài khoản của bạn</div>
             </div>
         </div>
         <div class="card">
             <div class="card-content">
-                <div class="card-label">Tỉ lệ hoàn thành trung bình</div>
-                <div class="card-value">72%</div>
-                <div class="card-sub">Mục tiêu tuần này: ≥ 80%</div>
+                <div class="card-label">Hành động</div>
+                <div class="card-value" style="font-size:18px;">→</div>
+                <div class="card-sub"><a href="assign-task.html" style="color:#6ee7b7;">Phân công task</a> · <a href="create-project.html" style="color:#6ee7b7;">Tạo dự án</a></div>
             </div>
         </div>
     </div>
@@ -495,72 +508,68 @@ tbody tr:hover {
                 <h2>Dự án & tiến độ</h2>
                 <span>Tổng quan các project mà bạn đang quản lý</span>
             </div>
-            <span style="font-size:12px;color:#6b7280;">4 / 12 dự án hiển thị</span>
+            <span style="font-size:12px;color:#6b7280;" id="tableCount">Đang tải...</span>
         </div>
         <table>
             <thead>
                 <tr>
                     <th>Tên dự án</th>
-                    <th>Khách hàng</th>
-                    <th>Số task</th>
-                    <th>Hoàn thành</th>
-                    <th>Trạng thái</th>
+                    <th>Mô tả</th>
+                    <th>Ngày tạo</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr>
-                    <td>Labeling ảnh giao thông</td>
-                    <td>SmartCity Corp</td>
-                    <td>12,000</td>
-                    <td>
-                        <div class="progress">
-                            <div class="progress-bar" style="width:68%;"></div>
-                        </div>
-                        <span style="font-size:11px;color:#9ca3af;">68%</span>
-                    </td>
-                    <td><span class="status-pill status-running">Đang chạy</span></td>
-                </tr>
-                <tr>
-                    <td>Nhận dạng hóa đơn</td>
-                    <td>FinPay</td>
-                    <td>8,500</td>
-                    <td>
-                        <div class="progress">
-                            <div class="progress-bar blue" style="width:92%;"></div>
-                        </div>
-                        <span style="font-size:11px;color:#9ca3af;">92%</span>
-                    </td>
-                    <td><span class="status-pill status-completed">Gần hoàn thành</span></td>
-                </tr>
-                <tr>
-                    <td>Phân loại cảm xúc review</td>
-                    <td>E‑Commerce VN</td>
-                    <td>5,000</td>
-                    <td>
-                        <div class="progress">
-                            <div class="progress-bar orange" style="width:41%;"></div>
-                        </div>
-                        <span style="font-size:11px;color:#f97316;">41% · Chậm</span>
-                    </td>
-                    <td><span class="status-pill status-paused">Cần thêm nguồn lực</span></td>
-                </tr>
-                <tr>
-                    <td>Transcript video đào tạo</td>
-                    <td>EduTech</td>
-                    <td>3,200</td>
-                    <td>
-                        <div class="progress">
-                            <div class="progress-bar" style="width:57%;"></div>
-                        </div>
-                        <span style="font-size:11px;color:#9ca3af;">57%</span>
-                    </td>
-                    <td><span class="status-pill status-running">Đang chạy</span></td>
-                </tr>
+            <tbody id="projectsTableBody">
+                <tr><td colspan="3">Đang tải...</td></tr>
             </tbody>
         </table>
     </div>
 
 </div>
 
+<script src="api-config.js"></script>
+<script src="api-helper.js"></script>
+<script>
+(function() {
+    var API = window.API;
+    var cfg = window.API_CONFIG;
+    if (!API || !API.requireAuth()) return;
+    var role = (localStorage.getItem('systemRole') || '').toUpperCase();
+    if (role !== 'ADMIN' && role !== 'MANAGER') {
+        window.location.href = 'user-dashboard.html';
+        return;
+    }
+
+    API.fetchWithAuth(cfg.users + '/me').then(function(r) { return r.json(); }).then(function(me) {
+        document.getElementById('headerUsername').textContent = me.username || '--';
+        document.getElementById('headerEmail').textContent = me.email || '--';
+        document.getElementById('cardUser').textContent = me.username || '--';
+    }).catch(function() {});
+
+    API.fetchWithAuth(cfg.projects + '?page=0&size=50').then(function(r) { return r.json(); }).then(function(data) {
+        var list = data.content || [];
+        document.getElementById('cardProjects').textContent = data.totalElements !== undefined ? data.totalElements : list.length;
+        document.getElementById('cardProjectsSub').textContent = list.length + ' dự án trong trang này';
+        document.getElementById('tableCount').textContent = list.length + (data.totalElements !== undefined ? ' / ' + data.totalElements : '') + ' dự án';
+        var tbody = document.getElementById('projectsTableBody');
+        if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3">Chưa có dự án. <a href="create-project.html" style="color:#22c55e;">Tạo dự án</a></td></tr>';
+            return;
+        }
+        tbody.innerHTML = list.map(function(p) {
+            var created = p.createdAt ? p.createdAt.substring(0, 10) : '--';
+            return '<tr><td>' + (p.name || '') + '</td><td>' + (p.description || '') + '</td><td>' + created + '</td></tr>';
+        }).join('');
+    }).catch(function(err) {
+        document.getElementById('projectsTableBody').innerHTML = '<tr><td colspan="3">Lỗi: ' + (err.message || '') + '</td></tr>';
+    });
+
+    API.fetchWithAuth(cfg.tasks + '?page=0&size=1').then(function(r) { return r.json(); }).then(function(data) {
+        document.getElementById('cardTasks').textContent = data.totalElements !== undefined ? data.totalElements : '0';
+        document.getElementById('cardTasksSub').textContent = 'Tổng task trong hệ thống';
+    }).catch(function() {
+        document.getElementById('cardTasks').textContent = '0';
+    });
+})();
+</script>
 </body>
 </html>

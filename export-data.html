@@ -1,18 +1,77 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-<title>Xuất dữ liệu</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xuất dữ liệu - Data Labeling</title>
 <style>
 body{font-family:sans-serif;background:#0f172a;color:white;padding:40px}
-button{padding:10px 20px;background:#f59e0b;border:none;color:white;border-radius:6px}
+.card{background:#1e293b;padding:24px;border-radius:10px;max-width:600px}
+button{padding:10px 20px;margin-right:10px;margin-bottom:10px;border:none;color:white;border-radius:6px;cursor:pointer}
+.json{background:#f59e0b}
+.csv{background:#3b82f6}
+a{color:#38bdf8}
+#msg{margin-top:12px}
 </style>
 </head>
 <body>
 
-<h2>Xuất dữ liệu sau khi duyệt</h2>
+<a href="manager.html">← Manager</a>
+<div class="card">
+  <h2>Xuất dữ liệu sau khi duyệt</h2>
+  <p id="msg">Chọn nguồn và định dạng xuất.</p>
+  <button class="json" id="btnJson">Export JSON (Data items)</button>
+  <button class="csv" id="btnCsv">Export CSV (Data items)</button>
+</div>
 
-<button>Export JSON</button>
-<button>Export CSV</button>
+<script src="api-config.js"></script>
+<script src="api-helper.js"></script>
+<script>
+(function() {
+  var API = window.API;
+  var cfg = window.API_CONFIG;
+  if (!API || !API.requireAuth()) return;
+  var msg = document.getElementById('msg');
 
+  function doExport(format) {
+    msg.textContent = 'Đang tải dữ liệu...';
+    API.fetchWithAuth(cfg.dataItems + '?page=0&size=500').then(function(r) { return r.json(); }).then(function(data) {
+      var list = data.content || [];
+      if (list.length === 0) {
+        msg.textContent = 'Không có data item nào.';
+        return;
+      }
+      if (format === 'json') {
+        var blob = new Blob([JSON.stringify(list, null, 2)], { type: 'application/json' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'data-items.json';
+        a.click();
+        URL.revokeObjectURL(a.href);
+        msg.textContent = 'Đã tải xuống data-items.json (' + list.length + ' mục).';
+      } else {
+        var headers = ['id', 'datasetId', 'status', 'contentUrl', 'metadata', 'createdAt'].join(',');
+        var rows = list.map(function(item) {
+          return [item.id, item.datasetId, item.status, item.contentUrl, (item.metadata || '').replace(/,/g, ';'), item.createdAt].join(',');
+        });
+        var csv = headers + '\n' + rows.join('\n');
+        var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'data-items.csv';
+        a.click();
+        URL.revokeObjectURL(a.href);
+        msg.textContent = 'Đã tải xuống data-items.csv (' + list.length + ' mục).';
+      }
+    }).catch(function(err) {
+      msg.textContent = 'Lỗi: ' + (err.message || '');
+      msg.style.color = '#f87171';
+    });
+  }
+
+  document.getElementById('btnJson').addEventListener('click', function() { doExport('json'); });
+  document.getElementById('btnCsv').addEventListener('click', function() { doExport('csv'); });
+})();
+</script>
 </body>
 </html>

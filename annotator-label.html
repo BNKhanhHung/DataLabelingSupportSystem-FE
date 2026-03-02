@@ -1,28 +1,97 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-<title>Gắn nhãn</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gắn nhãn - Data Labeling</title>
 <style>
 body{font-family:sans-serif;background:#0f172a;color:white;padding:40px}
-.image-box{width:400px;height:250px;background:#334155;margin-bottom:20px}
-button{padding:6px 12px;background:#22c55e;border:none;color:white;border-radius:6px}
+.card{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:16px}
+.image-box{width:100%;max-width:500px;height:280px;background:#334155;margin:12px 0;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#94a3b8}
+input,select,textarea{width:100%;max-width:400px;padding:10px;margin:8px 0;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#e2e8f0}
+button{padding:8px 16px;background:#22c55e;border:none;color:white;border-radius:6px;cursor:pointer}
+a{color:#38bdf8}
+#msg{margin-top:12px;font-size:14px}
 </style>
 </head>
 <body>
 
-<h2>Gắn nhãn dữ liệu</h2>
+<a href="annotator-tasks.html" class="btn back">← Danh sách task</a>
+<div class="card">
+  <h2>Gắn nhãn dữ liệu</h2>
+  <p id="taskInfo">Đang tải task...</p>
+  <div class="image-box" id="imageBox">Nội dung / ảnh (contentUrl từ data item)</div>
+  <form id="form">
+    <label>TaskItem ID * (cần có để gửi annotation)</label>
+    <input type="text" id="taskItemId" placeholder="UUID của TaskItem">
+    <label>Nhãn / Nội dung *</label>
+    <textarea id="content" rows="4" placeholder="Nhập nội dung gắn nhãn (JSON, text...)"></textarea>
+    <button type="submit" id="btn">Gửi annotation</button>
+  </form>
+  <p id="msg"></p>
+</div>
+<div class="card">
+  <h3>Annotations đã gửi trong task này</h3>
+  <div id="annotationList">Đang tải...</div>
+</div>
 
-<div class="image-box"></div>
+<script src="api-config.js"></script>
+<script src="api-helper.js"></script>
+<script>
+(function() {
+  var API = window.API;
+  var cfg = window.API_CONFIG;
+  if (!API || !API.requireAuth()) return;
+  var params = new URLSearchParams(window.location.search);
+  var taskId = params.get('taskId');
+  if (!taskId) {
+    document.getElementById('taskInfo').textContent = 'Thiếu taskId trong URL. Vào từ Danh sách task.';
+    return;
+  }
+  var userId = localStorage.getItem('userId');
+  if (!userId) { document.getElementById('taskInfo').textContent = 'Chưa đăng nhập.'; return; }
 
-<label>Nhãn:</label>
-<select>
-<option>Car</option>
-<option>Person</option>
-<option>Traffic Light</option>
-</select>
+  API.fetchWithAuth(cfg.tasks + '/' + taskId).then(function(r) { return r.json(); }).then(function(task) {
+    document.getElementById('taskInfo').textContent = 'Task: ' + (task.projectName || '') + ' · Trạng thái: ' + (task.status || '');
+  }).catch(function() { document.getElementById('taskInfo').textContent = 'Không tải được task.'; });
 
-<br><br>
-<button>Gửi Review</button>
+  API.fetchWithAuth(cfg.annotations + '/task/' + taskId + '?page=0&size=50').then(function(r) { return r.json(); }).then(function(data) {
+    var list = data.content || [];
+    var html = list.length === 0 ? 'Chưa có annotation nào.' : list.map(function(a) {
+      return '<p>DataItem ' + (a.dataItemId || '').substring(0, 8) + '... · TaskItemId: ' + a.taskItemId + ' · Nội dung: ' + (a.content || '').substring(0, 80) + '</p>';
+    }).join('');
+    document.getElementById('annotationList').innerHTML = html;
+    if (list.length > 0) document.getElementById('taskItemId').placeholder = 'VD: ' + list[0].taskItemId;
+  }).catch(function() { document.getElementById('annotationList').textContent = 'Lỗi tải annotations.'; });
 
+  document.getElementById('form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var taskItemId = document.getElementById('taskItemId').value.trim();
+    var content = document.getElementById('content').value.trim();
+    var msg = document.getElementById('msg');
+    var btn = document.getElementById('btn');
+    if (!taskItemId || !content) {
+      msg.textContent = 'Nhập TaskItem ID và nội dung.';
+      msg.style.color = '#f87171';
+      return;
+    }
+    btn.disabled = true;
+    msg.textContent = 'Đang gửi...';
+    API.fetchWithAuth(cfg.annotations, {
+      method: 'POST',
+      body: JSON.stringify({ taskItemId: taskItemId, annotatorId: userId, content: content })
+    }).then(function(r) { return r.json(); }).then(function() {
+      msg.textContent = 'Gửi annotation thành công.';
+      msg.style.color = '#4ade80';
+      document.getElementById('content').value = '';
+      location.reload();
+    }).catch(function(err) {
+      msg.textContent = 'Lỗi: ' + (err.message || '');
+      msg.style.color = '#f87171';
+      btn.disabled = false;
+    });
+  });
+})();
+</script>
 </body>
 </html>
