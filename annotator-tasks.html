@@ -41,12 +41,15 @@ a.back{background:#475569}
     var list = data.content || [];
     document.getElementById('msg').textContent = list.length === 0 ? 'Bạn chưa có task nào.' : 'Tổng: ' + list.length + ' task.';
     var html = list.length === 0 ? '<p>Chưa có task được giao.</p>' : list.map(function(t) {
-      var status = t.status || 'OPEN';
-      return '<div class="card"><div><p><strong>' + (t.projectName || 'Project') + '</strong></p><p>Task ID: ' + (t.id || '') + ' · Trạng thái: ' + status + '</p></div><a href="annotator-label.html?taskId=' + t.id + '" class="btn">Bắt đầu gắn nhãn</a></div>';
+      var status = API.escapeHtml(t.status || 'OPEN');
+      var projectName = API.escapeHtml(t.projectName || 'Project');
+      var taskId = API.escapeHtml(String(t.id || ''));
+      return '<div class="card"><div><p><strong>' + projectName + '</strong></p><p>Task ID: ' + taskId + ' · Trạng thái: ' + status + '</p></div><a href="annotator-label.html?taskId=' + taskId + '" class="btn">Bắt đầu gắn nhãn</a></div>';
     }).join('');
     document.getElementById('list').innerHTML = html;
   }).catch(function(err) {
-    document.getElementById('msg').textContent = 'Lỗi: ' + (err.message || '');
+    var errMsg = API.escapeHtml(err.message || 'Lỗi không xác định');
+    document.getElementById('msg').textContent = 'Lỗi: ' + errMsg;
     document.getElementById('msg').style.color = '#f87171';
   });
   document.getElementById('logoutLink').addEventListener('click', function(e) {

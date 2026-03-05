@@ -174,7 +174,10 @@ a.link-btn:hover { text-decoration: underline; }
         return;
       }
       tbody.innerHTML = list.slice(0, 5).map(function(t) {
-        return '<tr><td>' + (t.projectName || '') + '</td><td>' + (t.status || '') + '</td><td><a href="annotator-label.html?taskId=' + t.id + '" class="link-btn">Gắn nhãn</a></td></tr>';
+        var projectName = API.escapeHtml(t.projectName || '');
+        var status = API.escapeHtml(t.status || '');
+        var taskId = API.escapeHtml(String(t.id || ''));
+        return '<tr><td>' + projectName + '</td><td>' + status + '</td><td><a href="annotator-label.html?taskId=' + taskId + '" class="link-btn">Gắn nhãn</a></td></tr>';
       }).join('');
     }).catch(function() {
       document.getElementById('cardTaskCount').textContent = '0';

@@ -556,10 +556,13 @@ tbody tr:hover {
         tbody.innerHTML = list.map(function(u) {
             var r = u.systemRole || 'USER';
             var st = u.status || 'ACTIVE';
-            return '<tr><td>' + (u.username || '') + '</td><td>' + (u.email || '') + '</td><td><span class="role ' + roleClass(r) + '">' + r + '</span></td><td><span class="status-pill ' + statusClass(st) + '">' + st + '</span></td></tr>';
+            var username = API.escapeHtml(u.username || '');
+            var email = API.escapeHtml(u.email || '');
+            return '<tr><td>' + username + '</td><td>' + email + '</td><td><span class="role ' + roleClass(r) + '">' + API.escapeHtml(r) + '</span></td><td><span class="status-pill ' + statusClass(st) + '">' + API.escapeHtml(st) + '</span></td></tr>';
         }).join('');
     }).catch(function(err) {
-        document.getElementById('usersTableBody').innerHTML = '<tr><td colspan="4">Lỗi tải danh sách: ' + (err.message || '') + '</td></tr>';
+        var errMsg = API.escapeHtml(err.message || 'Unknown error');
+        document.getElementById('usersTableBody').innerHTML = '<tr><td colspan="4">Lỗi tải danh sách: ' + errMsg + '</td></tr>';
         document.getElementById('cardUsers').textContent = '0';
     });
 

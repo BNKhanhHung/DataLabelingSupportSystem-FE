@@ -55,7 +55,9 @@ a{color:#38bdf8}
     API.fetchWithAuth(cfg.projects + '?page=0&size=100').then(function(r) { return r.json(); }).then(function(data) {
       var list = data.content || [];
       projectSelect.innerHTML = '<option value="">-- Chọn dự án --</option>' + list.map(function(p) {
-        return '<option value="' + p.id + '">' + (p.name || p.id) + '</option>';
+        var name = API.escapeHtml(p.name || p.id);
+        var id = API.escapeHtml(String(p.id || ''));
+        return '<option value="' + id + '">' + name + '</option>';
       }).join('');
     }).catch(function() { projectSelect.innerHTML = '<option value="">Lỗi tải dự án</option>'; });
   }
@@ -69,7 +71,9 @@ a{color:#38bdf8}
         return r !== 'ADMIN' && r !== 'MANAGER';
       });
       var opt = '<option value="">-- Chọn --</option>' + onlyUsers.map(function(u) {
-        return '<option value="' + u.id + '">' + (u.username || u.email || u.id) + '</option>';
+        var username = API.escapeHtml(u.username || u.email || u.id);
+        var id = API.escapeHtml(String(u.id || ''));
+        return '<option value="' + id + '">' + username + '</option>';
       }).join('');
       annotatorSelect.innerHTML = opt;
       reviewerSelect.innerHTML = opt;

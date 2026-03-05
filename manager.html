@@ -557,10 +557,13 @@ tbody tr:hover {
         }
         tbody.innerHTML = list.map(function(p) {
             var created = p.createdAt ? p.createdAt.substring(0, 10) : '--';
-            return '<tr><td>' + (p.name || '') + '</td><td>' + (p.description || '') + '</td><td>' + created + '</td></tr>';
+            var name = API.escapeHtml(p.name || '');
+            var desc = API.escapeHtml(p.description || '');
+            return '<tr><td>' + name + '</td><td>' + desc + '</td><td>' + API.escapeHtml(created) + '</td></tr>';
         }).join('');
     }).catch(function(err) {
-        document.getElementById('projectsTableBody').innerHTML = '<tr><td colspan="3">Lỗi: ' + (err.message || '') + '</td></tr>';
+        var errMsg = API.escapeHtml(err.message || 'Unknown error');
+        document.getElementById('projectsTableBody').innerHTML = '<tr><td colspan="3">Lỗi: ' + errMsg + '</td></tr>';
     });
 
     API.fetchWithAuth(cfg.tasks + '?page=0&size=1').then(function(r) { return r.json(); }).then(function(data) {

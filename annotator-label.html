@@ -52,16 +52,24 @@ a{color:#38bdf8}
   if (!userId) { document.getElementById('taskInfo').textContent = 'Chưa đăng nhập.'; return; }
 
   API.fetchWithAuth(cfg.tasks + '/' + taskId).then(function(r) { return r.json(); }).then(function(task) {
-    document.getElementById('taskInfo').textContent = 'Task: ' + (task.projectName || '') + ' · Trạng thái: ' + (task.status || '');
+    var projectName = API.escapeHtml(task.projectName || '');
+    var status = API.escapeHtml(task.status || '');
+    document.getElementById('taskInfo').textContent = 'Task: ' + projectName + ' · Trạng thái: ' + status;
   }).catch(function() { document.getElementById('taskInfo').textContent = 'Không tải được task.'; });
 
   API.fetchWithAuth(cfg.annotations + '/task/' + taskId + '?page=0&size=50').then(function(r) { return r.json(); }).then(function(data) {
     var list = data.content || [];
     var html = list.length === 0 ? 'Chưa có annotation nào.' : list.map(function(a) {
-      return '<p>DataItem ' + (a.dataItemId || '').substring(0, 8) + '... · TaskItemId: ' + a.taskItemId + ' · Nội dung: ' + (a.content || '').substring(0, 80) + '</p>';
+      var dataItemId = API.escapeHtml((a.dataItemId || '').substring(0, 8));
+      var taskItemId = API.escapeHtml(a.taskItemId || '');
+      var content = API.escapeHtml((a.content || '').substring(0, 80));
+      return '<p>DataItem ' + dataItemId + '... · TaskItemId: ' + taskItemId + ' · Nội dung: ' + content + '</p>';
     }).join('');
     document.getElementById('annotationList').innerHTML = html;
-    if (list.length > 0) document.getElementById('taskItemId').placeholder = 'VD: ' + list[0].taskItemId;
+    if (list.length > 0) {
+      var placeholder = API.escapeHtml(list[0].taskItemId || 'VD');
+      document.getElementById('taskItemId').placeholder = 'VD: ' + placeholder;
+    }
   }).catch(function() { document.getElementById('annotationList').textContent = 'Lỗi tải annotations.'; });
 
   document.getElementById('form').addEventListener('submit', function(e) {
