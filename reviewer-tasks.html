@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task cần review - Data Labeling</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
+body { background: #0f172a; color: #e2e8f0; padding: 24px; min-height: 100vh; }
+nav { margin-bottom: 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+a.btn { padding: 8px 16px; background: #475569; color: white; border-radius: 8px; text-decoration: none; font-size: 14px; }
+a.btn.primary { background: #3b82f6; }
+a.btn.danger { background: #991b1b; }
+h2 { margin-bottom: 12px; font-size: 20px; }
+#msg { margin-bottom: 16px; color: #94a3b8; font-size: 14px; }
+.card { background: #1e293b; padding: 18px 20px; border-radius: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border: 1px solid #334155; }
+.card strong { color: #f1f5f9; }
+.card p { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+.card .btn-review { background: #f59e0b; color: #0f172a; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: 600; }
+.card .btn-review:hover { background: #fbbf24; }
+#list { max-width: 720px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="user-dashboard.html" class="btn">← Dashboard</a>
+  <a href="my-profile.html" class="btn">Thông tin của tôi</a>
+  <a href="reviewer-review.html" class="btn">Lịch sử review</a>
+  <a href="#" id="logoutLink" class="btn danger">Đăng xuất</a>
+</nav>
+<h2>Task cần review <button type="button" id="btnRefresh" class="btn primary" style="margin-left:12px">Làm mới</button></h2>
+<p id="msg">Đang tải...</p>
+<div id="list"></div>
+
+<script src="api-config.js"></script>
+<script src="api-helper.js"></script>
+<script>
+(function() {
+  var API = window.API;
+  var cfg = window.API_CONFIG;
+  if (!API || !API.requireAuth()) return;
+  var msgEl = document.getElementById('msg');
+  var listEl = document.getElementById('list');
+
+  function ensureUserId(done) {
+    var uid = localStorage.getItem('userId');
+    if (uid) { done(uid); return; }
+    API.fetchWithAuth(cfg.users + '/me').then(function(r) { return r.json(); }).then(function(me) {
+      if (me.id != null) {
+        localStorage.setItem('userId', String(me.id));
+        done(String(me.id));
+      } else done(null);
+    }).catch(function() { done(null); });
+  }
+
+  function loadTasks(uid) {
+    if (!uid) {
+      msgEl.textContent = 'Không xác định được user. Vui lòng đăng nhập lại.';
+      msgEl.style.color = '#f87171';
+      return;
+    }
+    msgEl.textContent = 'Đang tải...';
+    msgEl.style.color = '#94a3b8';
+    API.fetchWithAuth(cfg.tasks + '/reviewer/' + uid + '?page=0&size=50').then(function(r) { return r.json(); }).then(function(data) {
+      var list = data.content || [];
+      msgEl.textContent = list.length === 0 ? 'Bạn chưa có task nào cần review.' : 'Tổng: ' + list.length + ' task cần review.';
+      if (list.length === 0) {
+        listEl.innerHTML = '<p style="color:#94a3b8;">Chưa có task được giao để review. Khi annotator hoàn thành gắn nhãn, task sẽ xuất hiện tại đây.</p>';
+        return;
+      }
+      var html = list.map(function(t) {
+        var rawId = t.id != null ? t.id : (t.taskId != null ? t.taskId : (t.task_id != null ? t.task_id : null));
+        var tid = rawId != null ? (typeof rawId === 'string' ? rawId : String(rawId)) : '';
+        if (tid === '[object Object]') tid = '';
+        var status = t.status || 'OPEN';
+        var safeTid = (tid || '').replace(/"/g, '&quot;');
+        return '<div class="card">' +
+          '<div><p><strong>' + (t.projectName || 'Project') + '</strong></p><p>Task ID: ' + (tid ? tid.substring(0, 8) + '...' : '—') + ' · Trạng thái: ' + status + '</p></div>' +
+          '<a href="reviewer-task-review.html?taskId=' + encodeURIComponent(tid) + '" class="btn-review" data-task-id="' + safeTid + '" onclick="sessionStorage.setItem(\'pendingReviewTaskId\', this.getAttribute(\'data-task-id\'))">Vào review nhãn</a></div>';
+      }).join('');
+      listEl.innerHTML = html;
+    }).catch(function(err) {
+      msgEl.textContent = 'Lỗi: ' + (err.message || 'Không tải được.');
+      msgEl.style.color = '#f87171';
+    });
+  }
+
+  ensureUserId(function(uid) { loadTasks(uid); });
+  document.getElementById('btnRefresh').addEventListener('click', function() {
+    ensureUserId(function(uid) { loadTasks(uid); });
+  });
+  document.getElementById('logoutLink').addEventListener('click', function(e) {
+    e.preventDefault();
+    localStorage.removeItem('token'); localStorage.removeItem('userId'); localStorage.removeItem('username');
+    localStorage.removeItem('userEmail'); localStorage.removeItem('systemRole');
+    window.location.href = 'login.html';
+  });
+})();
+</script>
+</body>
+</html>

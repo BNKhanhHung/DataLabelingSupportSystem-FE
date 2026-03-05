@@ -106,7 +106,10 @@ a.link-btn:hover { text-decoration: underline; }
       <div class="card-content">
         <div class="card-label">Task được giao</div>
         <div class="card-value" id="cardTaskCount">--</div>
-        <div class="card-sub"><a href="annotator-tasks.html" class="link-btn">Xem danh sách task →</a></div>
+        <div class="card-sub">
+          <a href="annotator-tasks.html" class="link-btn">Task gán nhãn</a> ·
+          <a href="reviewer-review.html" class="link-btn">Task review</a>
+        </div>
       </div>
     </div>
     <div class="card">
@@ -121,12 +124,12 @@ a.link-btn:hover { text-decoration: underline; }
   <div class="table-container">
     <div class="table-header">
       <h2>Task gần đây</h2>
-      <a href="annotator-tasks.html" class="link-btn">Xem tất cả</a>
+      <a href="my-profile.html" class="link-btn">Xem tất cả</a>
     </div>
     <table>
-      <thead><tr><th>Dự án</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+      <thead><tr><th>Dự án</th><th>Loại</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
       <tbody id="taskTableBody">
-        <tr><td colspan="3">Đang tải...</td></tr>
+        <tr><td colspan="4">Đang tải...</td></tr>
       </tbody>
     </table>
   </div>
@@ -156,26 +159,42 @@ a.link-btn:hover { text-decoration: underline; }
   document.getElementById('logoutBtn').addEventListener('click', logout);
   document.getElementById('logoutLi').addEventListener('click', logout);
 
-  function loadAnnotatorTasks(uid) {
-    if (!uid) { document.getElementById('cardTaskCount').textContent = '0'; return; }
-    API.fetchWithAuth(cfg.tasks + '/annotator/' + uid + '?page=0&size=20').then(function(r) { return r.json(); }).then(function(data) {
-      var list = data.content || [];
-      var total = data.totalElements !== undefined ? data.totalElements : list.length;
+  function loadAllTasks(uid) {
+    if (!uid) {
+      document.getElementById('cardTaskCount').textContent = '0';
+      document.getElementById('taskTableBody').innerHTML = '<tr><td colspan="4">Chưa có task nào được giao.</td></tr>';
+      return;
+    }
+    var annotatorReq = API.fetchWithAuth(cfg.tasks + '/annotator/' + uid + '?page=0&size=20').then(function(r) { return r.json(); });
+    var reviewerReq = API.fetchWithAuth(cfg.tasks + '/reviewer/' + uid + '?page=0&size=20').then(function(r) { return r.json(); });
+    Promise.all([annotatorReq, reviewerReq]).then(function(results) {
+      var annotatorData = results[0] || {};
+      var reviewerData = results[1] || {};
+      var annotatorList = annotatorData.content || [];
+      var reviewerList = reviewerData.content || [];
+      var totalAnnotator = annotatorData.totalElements !== undefined ? annotatorData.totalElements : annotatorList.length;
+      var totalReviewer = reviewerData.totalElements !== undefined ? reviewerData.totalElements : reviewerList.length;
+      var total = totalAnnotator + totalReviewer;
       document.getElementById('cardTaskCount').textContent = total;
       var tbody = document.getElementById('taskTableBody');
-      if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3">Chưa có task nào được giao.</td></tr>';
+      if (annotatorList.length === 0 && reviewerList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4">Chưa có task nào được giao.</td></tr>';
         return;
       }
-      tbody.innerHTML = list.slice(0, 5).map(function(t) {
-        var tid = '';
-        if (t != null && (t.id != null || t.taskId != null)) tid = typeof (t.id || t.taskId) === 'string' ? (t.id || t.taskId) : String(t.id || t.taskId);
+      var rows = [];
+      annotatorList.slice(0, 5).forEach(function(t) {
+        var tid = t != null && (t.id != null || t.taskId != null) ? (typeof (t.id || t.taskId) === 'string' ? (t.id || t.taskId) : String(t.id || t.taskId)) : '';
         var safeTid = (tid || '').replace(/"/g, '&quot;');
-        return '<tr><td>' + (t.projectName || '') + '</td><td>' + (t.status || '') + '</td><td><a href="annotator-label.html?taskId=' + encodeURIComponent(tid) + '" class="link-btn" data-task-id="' + safeTid + '" onclick="sessionStorage.setItem(\'pendingTaskId\', this.getAttribute(\'data-task-id\'))">Gắn nhãn</a></td></tr>';
-      }).join('');
+        rows.push('<tr><td>' + (t.projectName || '') + '</td><td>Gán nhãn</td><td>' + (t.status || '') + '</td><td><a href="annotator-label.html?taskId=' + encodeURIComponent(tid) + '" class="link-btn" data-task-id="' + safeTid + '" onclick="sessionStorage.setItem(\'pendingTaskId\', this.getAttribute(\'data-task-id\'))">Gắn nhãn</a></td></tr>');
+      });
+      reviewerList.slice(0, 5).forEach(function(t) {
+        var rid = t != null && (t.id != null || t.taskId != null) ? (typeof (t.id || t.taskId) === 'string' ? (t.id || t.taskId) : String(t.id || t.taskId)) : '';
+        rows.push('<tr><td>' + (t.projectName || '') + '</td><td>Review</td><td>' + (t.status || '') + '</td><td><a href="reviewer-task-review.html?taskId=' + encodeURIComponent(rid) + '" class="link-btn">Review</a></td></tr>');
+      });
+      tbody.innerHTML = rows.join('');
     }).catch(function() {
       document.getElementById('cardTaskCount').textContent = '0';
-      document.getElementById('taskTableBody').innerHTML = '<tr><td colspan="3">Không tải được task.</td></tr>';
+      document.getElementById('taskTableBody').innerHTML = '<tr><td colspan="4">Không tải được task.</td></tr>';
     });
   }
 
@@ -185,9 +204,9 @@ a.link-btn:hover { text-decoration: underline; }
     document.getElementById('cardUsername').textContent = me.username || '--';
     var uid = (me.id != null ? String(me.id) : null) || localStorage.getItem('userId');
     if (me.id != null && !localStorage.getItem('userId')) localStorage.setItem('userId', String(me.id));
-    loadAnnotatorTasks(uid);
+    loadAllTasks(uid);
   }).catch(function() {
-    loadAnnotatorTasks(localStorage.getItem('userId'));
+    loadAllTasks(localStorage.getItem('userId'));
   });
 })();
 </script>

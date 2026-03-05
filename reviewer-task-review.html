@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Review nhãn - Task - Data Labeling</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
+body { background: #0f172a; color: #e2e8f0; padding: 24px; min-height: 100vh; }
+a { color: #38bdf8; text-decoration: none; }
+a:hover { text-decoration: underline; }
+nav { margin-bottom: 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-block; }
+.btn-back { background: #475569; color: white; }
+.btn-approve { background: #22c55e; color: white; margin-right: 8px; }
+.btn-reject { background: #ef4444; color: white; }
+.btn-approve:hover, .btn-reject:hover { opacity: 0.9; }
+.btn-approve:disabled, .btn-reject:disabled { opacity: 0.5; cursor: not-allowed; }
+h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
+.task-meta { font-size: 13px; color: #94a3b8; margin-bottom: 20px; }
+.card { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #334155; }
+.card h2 { font-size: 16px; margin-bottom: 12px; color: #e2e8f0; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th, .tbl td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #334155; vertical-align: middle; }
+.tbl th { color: #94a3b8; font-weight: 500; }
+.tbl td { color: #e2e8f0; }
+.tbl tr:hover { background: rgba(30, 41, 59, 0.6); }
+.tbl .content-cell { max-width: 280px; }
+.tbl .content-cell img { max-height: 120px; max-width: 200px; object-fit: contain; border-radius: 6px; }
+.tbl .content-cell a { color: #38bdf8; }
+#msg { margin-top: 12px; font-size: 14px; }
+#msg.err { color: #f87171; }
+#msg.ok { color: #4ade80; }
+.loading { color: #94a3b8; }
+.reviewed-badge { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+.pending-badge { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 100; }
+.modal.show { display: flex; }
+.modal-inner { background: #1e293b; padding: 24px; border-radius: 12px; max-width: 400px; width: 90%; border: 1px solid #334155; }
+.modal-inner h3 { margin-bottom: 12px; color: #f1f5f9; }
+.modal-inner textarea { width: 100%; min-height: 80px; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 14px; margin-bottom: 12px; resize: vertical; }
+.modal-inner .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="reviewer-tasks.html" class="btn btn-back">← Danh sách task review</a>
+  <a href="user-dashboard.html" class="btn btn-back" style="background:#334155;">Dashboard</a>
+</nav>
+
+<h1>Review nhãn đã gắn</h1>
+<p class="task-meta" id="taskMeta">Đang tải...</p>
+
+<div class="card">
+  <h2>Annotations chờ review (đã gắn nhãn — chưa duyệt)</h2>
+  <p id="intro" style="font-size:12px;color:#94a3b8;margin-bottom:12px;">Chỉ hiển thị annotation có trạng thái SUBMITTED và chưa có review. Duyệt hoặc từ chối từng mục.</p>
+  <div id="tableWrap">
+    <p id="tableLoading" class="loading">Đang tải...</p>
+    <table class="tbl" id="reviewTable" style="display:none;">
+      <thead>
+        <tr>
+          <th>STT</th>
+          <th>Nội dung (Data Item)</th>
+          <th>Nhãn đã gắn</th>
+          <th>Annotator</th>
+          <th>Trạng thái</th>
+          <th>Hành động</th>
+        </tr>
+      </thead>
+      <tbody id="reviewTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="msg"></div>
+
+<div class="modal" id="rejectModal">
+  <div class="modal-inner">
+    <h3>Lý do từ chối (bắt buộc)</h3>
+    <textarea id="rejectComment" placeholder="Nhập lý do từ chối..."></textarea>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-back" id="rejectModalCancel">Hủy</button>
+      <button type="button" class="btn btn-reject" id="rejectModalConfirm">Gửi từ chối</button>
+    </div>
+  </div>
+</div>
+
+<script src="api-config.js"></script>
+<script src="api-helper.js"></script>
+<script>
+(function() {
+  var API = window.API;
+  var cfg = window.API_CONFIG;
+  var baseUrl = (cfg && cfg.baseUrl) ? cfg.baseUrl.replace(/\/$/, '') : 'http://localhost:8080';
+  if (!API || !API.requireAuth()) return;
+
+  var params = new URLSearchParams(window.location.search);
+  var taskIdRaw = params.get('taskId') || params.get('taskid') || sessionStorage.getItem('pendingReviewTaskId') || '';
+  var taskId = (typeof taskIdRaw === 'string' ? taskIdRaw.trim() : String(taskIdRaw || ''));
+  if (taskId === 'undefined' || taskId === 'null' || taskId === '' || taskId === '[object Object]') taskId = null;
+  if (taskId) try { sessionStorage.removeItem('pendingReviewTaskId'); } catch (e) {}
+  var userId = localStorage.getItem('userId');
+  if (!userId) {
+    document.getElementById('taskMeta').textContent = 'Chưa đăng nhập.';
+    return;
+  }
+  if (!taskId) {
+    document.getElementById('taskMeta').textContent = 'Chưa chọn task. Đang chuyển về danh sách task...';
+    document.getElementById('taskMeta').style.color = '#fbbf24';
+    setTimeout(function() { window.location.replace('reviewer-tasks.html'); }, 1500);
+    return;
+  }
+
+  function safeJson(r) {
+    return r.text().then(function(text) {
+      if (!r.ok) {
+        var err = new Error(r.status + ' ' + (r.statusText || ''));
+        try { var d = JSON.parse(text); if (d && d.message) err.message = d.message; } catch (e) {}
+        throw err;
+      }
+      if (!text || text.trim() === '') return {};
+      try { return JSON.parse(text); } catch (e) { throw new Error('Invalid JSON'); }
+    });
+  }
+
+  function contentUrlFull(url) {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    if (url.startsWith('/')) return baseUrl + url;
+    return baseUrl + '/' + url;
+  }
+
+  var pendingReject = null;
+
+  function loadTask() {
+    return API.fetchWithAuth(cfg.tasks + '/' + taskId).then(safeJson).then(function(t) {
+      document.getElementById('taskMeta').textContent = 'Dự án: ' + (t.projectName || '') + ' — Trạng thái: ' + (t.status || '');
+      return t;
+    });
+  }
+
+  function loadAnnotations() {
+    return API.fetchWithAuth(cfg.annotations + '/task/' + taskId + '?page=0&size=100').then(safeJson).then(function(data) {
+      return data.content || [];
+    });
+  }
+
+  function loadReviewFeedbacks() {
+    return API.fetchWithAuth(cfg.reviewFeedbacks + '/task/' + taskId + '?page=0&size=100').then(safeJson).then(function(data) {
+      return data.content || [];
+    });
+  }
+
+  function render() {
+    var intro = document.getElementById('intro');
+    var loading = document.getElementById('tableLoading');
+    var table = document.getElementById('reviewTable');
+    var tbody = document.getElementById('reviewTableBody');
+
+    Promise.all([loadAnnotations(), loadReviewFeedbacks()]).then(function(results) {
+      var annotations = results[0];
+      var feedbacks = results[1];
+      var reviewedIds = {};
+      (feedbacks || []).forEach(function(f) {
+        if (f.annotationId) reviewedIds[f.annotationId] = true;
+      });
+      var pending = (annotations || []).filter(function(a) {
+        return (a.status === 'SUBMITTED' || a.status === 'Submitted') && !reviewedIds[a.id];
+      });
+
+      loading.style.display = 'none';
+      if (pending.length === 0) {
+        intro.textContent = 'Không còn annotation nào chờ review. Tất cả đã được duyệt hoặc chưa có annotator gửi.';
+        table.style.display = 'none';
+        return;
+      }
+      table.style.display = 'table';
+      intro.textContent = 'Có ' + pending.length + ' annotation chờ review. Duyệt hoặc từ chối từng mục.';
+
+      tbody.innerHTML = pending.map(function(a, idx) {
+        var url = a.contentUrl || '';
+        var fullUrl = contentUrlFull(url);
+        var isImg = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(url) || (fullUrl && fullUrl.indexOf('/api/uploads/') !== -1);
+        var contentCell = isImg && fullUrl
+          ? '<img src="' + fullUrl.replace(/"/g, '&quot;') + '" alt="Nội dung" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'inline\';"><span style="display:none;color:#94a3b8;">Không tải ảnh</span>'
+          : (fullUrl ? '<a href="' + fullUrl.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">Xem nội dung</a>' : '<span style="color:#94a3b8;">—</span>');
+        var id = (a.id != null ? a.id : '').toString().replace(/"/g, '&quot;');
+        return '<tr data-annotation-id="' + id + '">' +
+          '<td>' + (idx + 1) + '</td>' +
+          '<td class="content-cell">' + contentCell + '</td>' +
+          '<td>' + (a.content || '—') + '</td>' +
+          '<td>' + (a.annotatorUsername || '—') + '</td>' +
+          '<td><span class="pending-badge">Chờ review</span></td>' +
+          '<td><button type="button" class="btn btn-approve" data-action="approve" data-id="' + id + '">Duyệt</button><button type="button" class="btn btn-reject" data-action="reject" data-id="' + id + '">Từ chối</button></td></tr>';
+      }).join('');
+
+      tbody.querySelectorAll('[data-action="approve"]').forEach(function(btn) {
+        btn.addEventListener('click', function() { submitReview(btn.getAttribute('data-id'), true, null); });
+      });
+      tbody.querySelectorAll('[data-action="reject"]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          pendingReject = btn.getAttribute('data-id');
+          document.getElementById('rejectComment').value = '';
+          document.getElementById('rejectModal').classList.add('show');
+        });
+      });
+    }).catch(function(err) {
+      loading.style.display = 'none';
+      intro.textContent = 'Lỗi: ' + (err.message || 'Không tải được.');
+      intro.style.color = '#f87171';
+    });
+  }
+
+  function submitReview(annotationId, approved, comment) {
+    var status = approved ? 'APPROVED' : 'REJECTED';
+    var body = {
+      annotationId: annotationId,
+      reviewerId: userId,
+      status: status,
+      comment: comment || null
+    };
+    var msgEl = document.getElementById('msg');
+    msgEl.textContent = 'Đang gửi...';
+    msgEl.className = 'loading';
+    API.fetchWithAuth(cfg.reviewFeedbacks, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function(r) {
+      return r.json().then(function() {
+        if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        return {};
+      }).catch(function() {
+        if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        return {};
+      });
+    }).then(function() {
+      msgEl.textContent = approved ? 'Đã duyệt.' : 'Đã từ chối.';
+      msgEl.className = 'ok';
+      render();
+    }).catch(function(err) {
+      msgEl.textContent = 'Lỗi: ' + (err.message || '');
+      msgEl.className = 'err';
+    });
+  }
+
+  document.getElementById('rejectModalCancel').addEventListener('click', function() {
+    document.getElementById('rejectModal').classList.remove('show');
+    pendingReject = null;
+  });
+  document.getElementById('rejectModalConfirm').addEventListener('click', function() {
+    var comment = (document.getElementById('rejectComment').value || '').trim();
+    if (!comment) {
+      alert('Vui lòng nhập lý do từ chối.');
+      return;
+    }
+    if (pendingReject) {
+      submitReview(pendingReject, false, comment);
+      document.getElementById('rejectModal').classList.remove('show');
+      pendingReject = null;
+    }
+  });
+
+  loadTask().then(function() { render(); }).catch(function(err) {
+    document.getElementById('taskMeta').textContent = 'Lỗi: ' + (err.message || '');
+    document.getElementById('taskMeta').style.color = '#f87171';
+  });
+})();
+</script>
+</body>
+</html>

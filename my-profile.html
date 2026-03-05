@@ -81,7 +81,7 @@ a.link-btn:hover { text-decoration: underline; }
   </div>
 
   <div class="section">
-    <h2>Task cần review <a href="reviewer-review.html">Xem feedback</a></h2>
+    <h2>Task cần review <a href="reviewer-tasks.html">Xem tất cả task</a> · <a href="reviewer-review.html">Lịch sử review</a></h2>
     <table>
       <thead><tr><th>Dự án</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
       <tbody id="reviewerTasksBody"><tr><td colspan="3" class="loading">Đang tải...</td></tr></tbody>
@@ -117,9 +117,10 @@ a.link-btn:hover { text-decoration: underline; }
     tbody.innerHTML = list.slice(0, 10).map(function(t) {
       var tid = '';
       if (t != null && (t.id != null || t.taskId != null)) tid = typeof (t.id || t.taskId) === 'string' ? (t.id || t.taskId) : String(t.id || t.taskId);
-      var href = linkPath === 'annotator-label.html' ? (linkPath + '?taskId=' + encodeURIComponent(tid)) : linkPath;
+      var withTaskId = (linkPath === 'annotator-label.html' || linkPath === 'reviewer-task-review.html');
+      var href = withTaskId ? (linkPath + '?taskId=' + encodeURIComponent(tid)) : linkPath;
       var safeTid = (tid || '').replace(/"/g, '&quot;');
-      var extra = linkPath === 'annotator-label.html' ? (' data-task-id="' + safeTid + '" onclick="sessionStorage.setItem(\'pendingTaskId\', this.getAttribute(\'data-task-id\'))"') : '';
+      var extra = withTaskId ? (' data-task-id="' + safeTid + '" onclick="sessionStorage.setItem(\'pendingTaskId\', this.getAttribute(\'data-task-id\'))"') : '';
       return '<tr><td>' + (t.projectName || '') + '</td><td>' + (t.status || '') + '</td><td><a href="' + href + '" class="link-btn"' + extra + '>' + linkLabel + '</a></td></tr>';
     }).join('');
   }
@@ -136,7 +137,7 @@ a.link-btn:hover { text-decoration: underline; }
       document.getElementById('annotatorTasksBody').innerHTML = '<tr><td colspan="3" class="empty">Không tải được.</td></tr>';
     });
     API.fetchWithAuth(cfg.tasks + '/reviewer/' + uid + '?page=0&size=20').then(function(r) { return r.json(); }).then(function(data) {
-      renderTaskRows(data.content || [], 'reviewerTasksBody', 'Review', 'reviewer-review.html');
+      renderTaskRows(data.content || [], 'reviewerTasksBody', 'Review', 'reviewer-task-review.html');
     }).catch(function() {
       document.getElementById('reviewerTasksBody').innerHTML = '<tr><td colspan="3" class="empty">Không tải được.</td></tr>';
     });
