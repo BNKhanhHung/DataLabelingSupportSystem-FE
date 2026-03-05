@@ -265,7 +265,8 @@ body {
                 var token = data.token || data.accessToken || data.jwt;
                 if (token) {
                     localStorage.setItem('token', token);
-                    if (data.userId) localStorage.setItem('userId', String(data.userId));
+                    var uid = data.userId != null ? data.userId : data.id;
+                    if (uid != null) localStorage.setItem('userId', String(uid));
                     if (data.username) localStorage.setItem('username', data.username);
                     if (data.email) localStorage.setItem('userEmail', data.email);
                     if (data.systemRole) localStorage.setItem('systemRole', data.systemRole);

@@ -156,15 +156,9 @@ a.link-btn:hover { text-decoration: underline; }
   document.getElementById('logoutBtn').addEventListener('click', logout);
   document.getElementById('logoutLi').addEventListener('click', logout);
 
-  API.fetchWithAuth(cfg.users + '/me').then(function(r) { return r.json(); }).then(function(me) {
-    document.getElementById('headerUsername').textContent = me.username || '--';
-    document.getElementById('headerEmail').textContent = me.email || '--';
-    document.getElementById('cardUsername').textContent = me.username || '--';
-  }).catch(function() {});
-
-  var userId = localStorage.getItem('userId');
-  if (userId) {
-    API.fetchWithAuth(cfg.tasks + '/annotator/' + userId + '?page=0&size=20').then(function(r) { return r.json(); }).then(function(data) {
+  function loadAnnotatorTasks(uid) {
+    if (!uid) { document.getElementById('cardTaskCount').textContent = '0'; return; }
+    API.fetchWithAuth(cfg.tasks + '/annotator/' + uid + '?page=0&size=20').then(function(r) { return r.json(); }).then(function(data) {
       var list = data.content || [];
       var total = data.totalElements !== undefined ? data.totalElements : list.length;
       document.getElementById('cardTaskCount').textContent = total;
@@ -174,15 +168,27 @@ a.link-btn:hover { text-decoration: underline; }
         return;
       }
       tbody.innerHTML = list.slice(0, 5).map(function(t) {
-        return '<tr><td>' + (t.projectName || '') + '</td><td>' + (t.status || '') + '</td><td><a href="annotator-label.html?taskId=' + t.id + '" class="link-btn">Gắn nhãn</a></td></tr>';
+        var tid = '';
+        if (t != null && (t.id != null || t.taskId != null)) tid = typeof (t.id || t.taskId) === 'string' ? (t.id || t.taskId) : String(t.id || t.taskId);
+        var safeTid = (tid || '').replace(/"/g, '&quot;');
+        return '<tr><td>' + (t.projectName || '') + '</td><td>' + (t.status || '') + '</td><td><a href="annotator-label.html?taskId=' + encodeURIComponent(tid) + '" class="link-btn" data-task-id="' + safeTid + '" onclick="sessionStorage.setItem(\'pendingTaskId\', this.getAttribute(\'data-task-id\'))">Gắn nhãn</a></td></tr>';
       }).join('');
     }).catch(function() {
       document.getElementById('cardTaskCount').textContent = '0';
       document.getElementById('taskTableBody').innerHTML = '<tr><td colspan="3">Không tải được task.</td></tr>';
     });
-  } else {
-    document.getElementById('cardTaskCount').textContent = '0';
   }
+
+  API.fetchWithAuth(cfg.users + '/me').then(function(r) { return r.json(); }).then(function(me) {
+    document.getElementById('headerUsername').textContent = me.username || '--';
+    document.getElementById('headerEmail').textContent = me.email || '--';
+    document.getElementById('cardUsername').textContent = me.username || '--';
+    var uid = (me.id != null ? String(me.id) : null) || localStorage.getItem('userId');
+    if (me.id != null && !localStorage.getItem('userId')) localStorage.setItem('userId', String(me.id));
+    loadAnnotatorTasks(uid);
+  }).catch(function() {
+    loadAnnotatorTasks(localStorage.getItem('userId'));
+  });
 })();
 </script>
 </body>

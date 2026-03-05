@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tạo Data Item - Data Labeling</title>
+<style>
+body{font-family:sans-serif;background:#0f172a;color:white;padding:40px}
+input,textarea,select{width:100%;padding:10px;margin:10px 0;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;box-sizing:border-box}
+button{padding:10px 20px;background:#22c55e;border:none;color:white;border-radius:6px;cursor:pointer;margin-right:8px}
+button:disabled{opacity:0.6;cursor:not-allowed}
+button.secondary{background:#475569}
+.card{background:#1e293b;padding:30px;border-radius:12px;max-width:600px;margin-bottom:20px}
+a{color:#38bdf8}
+#msg{margin-top:12px;font-size:14px}
+label{display:block;margin-top:8px;color:#94a3b8;font-size:14px}
+.tabs{margin-bottom:16px}
+.tabs button{padding:8px 16px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#94a3b8;cursor:pointer}
+.tabs button.active{background:#0ea5e9;color:white;border-color:#0ea5e9}
+.panel{display:none}
+.panel.active{display:block}
+input[type=file]{padding:8px}
+</style>
+</head>
+<body>
+
+<div class="card">
+<h2>Thêm Data Item</h2>
+<p style="color:#94a3b8;margin-bottom:16px;">Chọn dự án và dataset, sau đó thêm bằng URL hoặc upload file.</p>
+
+<div class="tabs">
+  <button type="button" id="tabUrl" class="active">Thêm bằng URL</button>
+  <button type="button" id="tabUpload">Upload file</button>
+</div>
+
+<label>Dự án *</label>
+<select id="projectId">
+  <option value="">-- Chọn dự án --</option>
+</select>
+<label>Dataset (trong dự án) *</label>
+<select id="datasetId">
+  <option value="">-- Chọn dự án trước --</option>
+</select>
+
+<div id="panelUrl" class="panel active">
+  <form id="formUrl">
+    <label>Content URL *</label>
+    <input type="url" id="contentUrl" placeholder="https://example.com/image.jpg" maxlength="1000">
+    <label>Metadata (tùy chọn)</label>
+    <textarea id="metadataUrl" rows="2" placeholder="JSON hoặc text mô tả"></textarea>
+    <button type="submit" id="btnUrl">Tạo Data Item (URL)</button>
+  </form>
+</div>
+
+<div id="panelUpload" class="panel">
+  <form id="formUpload">
+    <label>Chọn file *</label>
+    <input type="file" id="fileInput" accept="*/*">
+    <label>Metadata (tùy chọn)</label>
+    <input type="text" id="metadataUpload" placeholder="Mô tả hoặc metadata">
+    <button type="submit" id="btnUpload">Upload & tạo Data Item</button>
+  </form>
+</div>
+
+<p id="msg"></p>
+<a href="manager.html" style="display:inline-block;margin-top:16px;">← Quay lại Manager</a>
+</div>
+
+<script src="api-config.js"></script>
+<script src="api-helper.js"></script>
+<script>
+(function() {
+  var API = window.API;
+  var cfg = window.API_CONFIG;
+  if (!API || !API.requireAuth()) return;
+  var role = (localStorage.getItem('systemRole') || '').toUpperCase();
+  if (role !== 'ADMIN' && role !== 'MANAGER') {
+    window.location.href = 'user-dashboard.html';
+    return;
+  }
+
+  var projectSelect = document.getElementById('projectId');
+  var datasetSelect = document.getElementById('datasetId');
+  var msg = document.getElementById('msg');
+
+  function showMsg(text, isError) {
+    msg.textContent = text;
+    msg.style.color = isError ? '#f87171' : '#4ade80';
+  }
+
+  API.fetchWithAuth(cfg.projects + '?page=0&size=100').then(function(r) { return r.json(); }).then(function(data) {
+    var list = data.content || [];
+    projectSelect.innerHTML = '<option value="">-- Chọn dự án --</option>' + list.map(function(p) {
+      return '<option value="' + p.id + '">' + (p.name || p.id) + '</option>';
+    }).join('');
+  }).catch(function() { projectSelect.innerHTML = '<option value="">Lỗi tải dự án</option>'; });
+
+  projectSelect.addEventListener('change', function() {
+    var pid = this.value;
+    datasetSelect.innerHTML = '<option value="">-- Chọn dataset --</option>';
+    if (!pid) return;
+    datasetSelect.disabled = true;
+    API.fetchWithAuth(cfg.datasets + '/project/' + pid + '?page=0&size=50').then(function(r) { return r.json(); }).then(function(data) {
+      var list = data.content || [];
+      datasetSelect.disabled = false;
+      datasetSelect.innerHTML = '<option value="">-- Chọn dataset --</option>' + list.map(function(d) {
+        return '<option value="' + d.id + '">' + (d.name || d.id) + '</option>';
+      }).join('');
+    }).catch(function() { datasetSelect.disabled = false; datasetSelect.innerHTML = '<option value="">Lỗi tải dataset</option>'; });
+  });
+
+  document.getElementById('tabUrl').addEventListener('click', function() {
+    document.getElementById('panelUrl').classList.add('active');
+    document.getElementById('panelUpload').classList.remove('active');
+    this.classList.add('active');
+    document.getElementById('tabUpload').classList.remove('active');
+  });
+  document.getElementById('tabUpload').addEventListener('click', function() {
+    document.getElementById('panelUpload').classList.add('active');
+    document.getElementById('panelUrl').classList.remove('active');
+    this.classList.add('active');
+    document.getElementById('tabUrl').classList.remove('active');
+  });
+
+  document.getElementById('formUrl').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var datasetId = datasetSelect.value;
+    var contentUrl = document.getElementById('contentUrl').value.trim();
+    if (!datasetId) { showMsg('Vui lòng chọn dự án và dataset.', true); return; }
+    if (!contentUrl) { showMsg('Vui lòng nhập Content URL.', true); return; }
+    var btn = document.getElementById('btnUrl');
+    btn.disabled = true;
+    showMsg('Đang tạo...', false);
+    API.fetchWithAuth(cfg.dataItems, {
+      method: 'POST',
+      body: JSON.stringify({
+        datasetId: datasetId,
+        contentUrl: contentUrl,
+        metadata: document.getElementById('metadataUrl').value.trim() || null
+      })
+    }).then(function(r) { return r.json(); }).then(function() {
+      showMsg('Tạo data item thành công.');
+      document.getElementById('contentUrl').value = '';
+      document.getElementById('metadataUrl').value = '';
+    }).catch(function(err) {
+      showMsg('Lỗi: ' + (err.message || 'Tạo thất bại'), true);
+    }).finally(function() { btn.disabled = false; });
+  });
+
+  document.getElementById('formUpload').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var datasetId = datasetSelect.value;
+    var fileInput = document.getElementById('fileInput');
+    if (!datasetId) { showMsg('Vui lòng chọn dự án và dataset.', true); return; }
+    if (!fileInput.files || !fileInput.files[0]) { showMsg('Vui lòng chọn file.', true); return; }
+    var formData = new FormData();
+    formData.append('datasetId', datasetId);
+    formData.append('file', fileInput.files[0]);
+    var meta = document.getElementById('metadataUpload').value.trim();
+    if (meta) formData.append('metadata', meta);
+    var btn = document.getElementById('btnUpload');
+    btn.disabled = true;
+    showMsg('Đang upload...', false);
+    var url = API.getBaseUrl() + '/api/data-items/upload';
+    var token = API.getToken();
+    fetch(url, {
+      method: 'POST',
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+      body: formData
+    }).then(function(res) {
+      if (res.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = 'login.html';
+        throw new Error('Unauthorized');
+      }
+      if (!res.ok) return res.json().then(function(d) {
+        var msg = d.message || d.error || ('Upload thất bại (HTTP ' + res.status + ')');
+        if (msg === 'Upload failed: null' || (msg && msg.indexOf('null') !== -1 && msg.length < 30)) msg = 'Upload thất bại. Kiểm tra backend đã cấu hình Supabase (url, service-key, bucket) chưa.';
+        throw new Error(msg);
+      });
+      return res.json();
+    }).then(function() {
+      showMsg('Upload và tạo data item thành công.');
+      fileInput.value = '';
+      document.getElementById('metadataUpload').value = '';
+    }).catch(function(err) {
+      showMsg('Lỗi: ' + (err.message || 'Upload thất bại'), true);
+    }).finally(function() { btn.disabled = false; });
+  });
+})();
+</script>
+</body>
+</html>

@@ -366,6 +366,50 @@ tbody tr:hover {
     background: linear-gradient(90deg, #3b82f6, #22c55e);
 }
 
+/* Task status pills */
+.status-open {
+    background: rgba(148, 163, 184, 0.2);
+    color: #cbd5e1;
+    border: 1px solid rgba(148, 163, 184, 0.5);
+}
+
+.btn-sm {
+    padding: 4px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-edit {
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+}
+
+.btn-edit:hover {
+    background: rgba(59, 130, 246, 0.35);
+}
+
+.btn-delete {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+}
+
+.btn-delete:hover {
+    background: rgba(239, 68, 68, 0.35);
+}
+
+.task-status-select {
+    background: rgba(15, 23, 42, 0.95);
+    color: #e5e7eb;
+    border: 1px solid rgba(148, 163, 184, 0.5);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
 @media (max-width: 900px) {
     .sidebar {
         display: none;
@@ -417,6 +461,24 @@ tbody tr:hover {
                 <span>Tạo dự án</span>
             </span>
         </li>
+        <li onclick="window.location='create-dataset.html'">
+            <span class="label">
+                <span class="nav-dot"></span>
+                <span>Tạo Dataset</span>
+            </span>
+        </li>
+        <li onclick="window.location='create-label.html'">
+            <span class="label">
+                <span class="nav-dot"></span>
+                <span>Tạo Label</span>
+            </span>
+        </li>
+        <li onclick="window.location='create-dataitem.html'">
+            <span class="label">
+                <span class="nav-dot"></span>
+                <span>Tạo Data Item</span>
+            </span>
+        </li>
         <li onclick="window.location='assign-task.html'">
             <span class="label">
                 <span class="nav-dot"></span>
@@ -456,9 +518,9 @@ tbody tr:hover {
         </div>
         <div class="header-right">
             <div class="filter-pill">
-                <button class="active">Tất cả</button>
-                <button>Đang chạy</button>
-                <button>Chậm tiến độ</button>
+                <button class="active" data-filter="ALL">Tất cả</button>
+                <button data-filter="IN_PROGRESS">Đang chạy</button>
+                <button data-filter="COMPLETED">Hoàn thành</button>
             </div>
             <div class="user-pill" id="userPill">
                 <div class="user-avatar"></div>
@@ -524,6 +586,35 @@ tbody tr:hover {
         </table>
     </div>
 
+    <div class="table-container" style="margin-top: 18px;">
+        <div class="table-header">
+            <div>
+                <h2>Tasks hiện có</h2>
+                <span>Danh sách task và trạng thái · Có thể sửa trạng thái hoặc xóa</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 12px; color: #6b7280;" id="tasksTableCount">Đang tải...</span>
+                <button type="button" class="btn-sm btn-edit" id="btnRefreshTasks">Làm mới</button>
+            </div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Task ID</th>
+                    <th>Dự án</th>
+                    <th>Annotator</th>
+                    <th>Reviewer</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày tạo</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody id="tasksTableBody">
+                <tr><td colspan="7">Đang tải...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
 </div>
 
 <script src="api-config.js"></script>
@@ -569,6 +660,127 @@ tbody tr:hover {
     }).catch(function() {
         document.getElementById('cardTasks').textContent = '0';
     });
+
+    // ── Tasks table: load, filter, edit status, delete ───────────────────────
+    var allTasks = [];
+    var taskFilter = 'ALL'; // ALL | IN_PROGRESS | COMPLETED | OPEN
+
+    function statusClass(s) {
+        if (s === 'OPEN') return 'status-open';
+        if (s === 'IN_PROGRESS') return 'status-running';
+        if (s === 'COMPLETED') return 'status-completed';
+        return 'status-open';
+    }
+
+    function statusLabel(s) {
+        if (s === 'OPEN') return 'Mới';
+        if (s === 'IN_PROGRESS') return 'Đang làm';
+        if (s === 'COMPLETED') return 'Hoàn thành';
+        return s || '--';
+    }
+
+    function renderTasksTable(list) {
+        var tbody = document.getElementById('tasksTableBody');
+        if (!list || list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7">Chưa có task nào.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = list.map(function(t) {
+            var idShort = (t.id || '').toString().substring(0, 8);
+            var created = t.createdAt ? t.createdAt.substring(0, 10) : '--';
+            var status = (t.status || 'OPEN').toString();
+            var rowId = 'task-row-' + (t.id || '').toString().replace(/-/g, '');
+            return '<tr id="' + rowId + '">' +
+                '<td>' + idShort + '...</td>' +
+                '<td>' + (t.projectName || '--') + '</td>' +
+                '<td>' + (t.annotatorUsername || '--') + '</td>' +
+                '<td>' + (t.reviewerUsername || '--') + '</td>' +
+                '<td><span class="status-pill ' + statusClass(status) + '">' + statusLabel(status) + '</span></td>' +
+                '<td>' + created + '</td>' +
+                '<td>' +
+                '<select class="task-status-select" data-task-id="' + t.id + '" data-task-row="' + rowId + '">' +
+                '<option value="OPEN"' + (status === 'OPEN' ? ' selected' : '') + '>Mới</option>' +
+                '<option value="IN_PROGRESS"' + (status === 'IN_PROGRESS' ? ' selected' : '') + '>Đang làm</option>' +
+                '<option value="COMPLETED"' + (status === 'COMPLETED' ? ' selected' : '') + '>Hoàn thành</option>' +
+                '</select> ' +
+                '<button type="button" class="btn-sm btn-edit task-btn-update" data-task-id="' + t.id + '">Cập nhật</button> ' +
+                '<button type="button" class="btn-sm btn-delete task-btn-delete" data-task-id="' + t.id + '">Xóa</button>' +
+                '</td></tr>';
+        }).join('');
+        document.getElementById('tasksTableCount').textContent = list.length + ' task';
+        bindTaskActions();
+    }
+
+    function bindTaskActions() {
+        document.querySelectorAll('.task-btn-update').forEach(function(btn) {
+            btn.onclick = function() {
+                var taskId = btn.getAttribute('data-task-id');
+                var row = document.getElementById('task-row-' + taskId.toString().replace(/-/g, ''));
+                var select = row ? row.querySelector('.task-status-select') : null;
+                var newStatus = select ? select.value : null;
+                if (!taskId || !newStatus) return;
+                btn.disabled = true;
+                API.fetchWithAuth(cfg.tasks + '/' + taskId + '/status?status=' + encodeURIComponent(newStatus), {
+                    method: 'PATCH'
+                }).then(function(r) {
+                    if (!r.ok) return r.json().then(function(d) { throw new Error(d.message || 'Cập nhật thất bại'); });
+                    return r.json();
+                }).then(function() {
+                    var task = allTasks.find(function(x) { return (x.id || '').toString() === (taskId || '').toString(); });
+                    if (task) task.status = newStatus;
+                    renderTasksTable(filteredTaskList());
+                }).catch(function(err) {
+                    alert('Lỗi: ' + (err.message || 'Cập nhật thất bại'));
+                }).finally(function() { btn.disabled = false; });
+            };
+        });
+        document.querySelectorAll('.task-btn-delete').forEach(function(btn) {
+            btn.onclick = function() {
+                var taskId = btn.getAttribute('data-task-id');
+                if (!taskId || !confirm('Bạn có chắc muốn xóa task này?')) return;
+                btn.disabled = true;
+                API.fetchWithAuth(cfg.tasks + '/' + taskId, { method: 'DELETE' }).then(function(r) {
+                    if (r.status !== 204 && !r.ok) return r.json().then(function(d) { throw new Error(d.message || 'Xóa thất bại'); });
+                }).then(function() {
+                    allTasks = allTasks.filter(function(x) { return (x.id || '').toString() !== (taskId || '').toString(); });
+                    renderTasksTable(filteredTaskList());
+                    document.getElementById('cardTasks').textContent = Math.max(0, (parseInt(document.getElementById('cardTasks').textContent, 10) || 0) - 1);
+                }).catch(function(err) {
+                    alert('Lỗi: ' + (err.message || 'Xóa thất bại'));
+                }).finally(function() { btn.disabled = false; });
+            };
+        });
+    }
+
+    function filteredTaskList() {
+        if (taskFilter === 'ALL') return allTasks;
+        return allTasks.filter(function(t) { return (t.status || 'OPEN').toString() === taskFilter; });
+    }
+
+    function loadTasks() {
+        document.getElementById('tasksTableBody').innerHTML = '<tr><td colspan="7">Đang tải...</td></tr>';
+        API.fetchWithAuth(cfg.tasks + '?page=0&size=200&sort=createdAt,desc').then(function(r) { return r.json(); }).then(function(data) {
+            allTasks = data.content || [];
+            renderTasksTable(filteredTaskList());
+        }).catch(function(err) {
+            document.getElementById('tasksTableBody').innerHTML = '<tr><td colspan="7">Lỗi: ' + (err.message || 'Không tải được task') + '</td></tr>';
+            document.getElementById('tasksTableCount').textContent = 'Lỗi';
+        });
+    }
+
+    document.getElementById('btnRefreshTasks').addEventListener('click', loadTasks);
+
+    document.querySelectorAll('.filter-pill button').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var f = btn.getAttribute('data-filter');
+            taskFilter = (f === 'IN_PROGRESS' || f === 'COMPLETED') ? f : 'ALL';
+            document.querySelectorAll('.filter-pill button').forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            renderTasksTable(filteredTaskList());
+        });
+    });
+
+    loadTasks();
 })();
 </script>
 </body>
