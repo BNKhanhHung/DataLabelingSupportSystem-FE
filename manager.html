@@ -372,6 +372,21 @@ tbody tr:hover {
     color: #cbd5e1;
     border: 1px solid rgba(148, 163, 184, 0.5);
 }
+.status-submitted {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fcd34d;
+    border: 1px solid rgba(245, 158, 11, 0.5);
+}
+.status-reviewed {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.5);
+}
+.status-denied {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+}
 
 .btn-sm {
     padding: 4px 10px;
@@ -519,7 +534,10 @@ tbody tr:hover {
         <div class="header-right">
             <div class="filter-pill">
                 <button class="active" data-filter="ALL">Tất cả</button>
-                <button data-filter="IN_PROGRESS">Đang chạy</button>
+                <button data-filter="IN_PROGRESS">Đang làm</button>
+                <button data-filter="SUBMITTED">Đã nộp</button>
+                <button data-filter="REVIEWED">Đã review</button>
+                <button data-filter="DENIED">Từ chối</button>
                 <button data-filter="COMPLETED">Hoàn thành</button>
             </div>
             <div class="user-pill" id="userPill">
@@ -668,6 +686,9 @@ tbody tr:hover {
     function statusClass(s) {
         if (s === 'OPEN') return 'status-open';
         if (s === 'IN_PROGRESS') return 'status-running';
+        if (s === 'SUBMITTED') return 'status-submitted';
+        if (s === 'REVIEWED') return 'status-reviewed';
+        if (s === 'DENIED') return 'status-denied';
         if (s === 'COMPLETED') return 'status-completed';
         return 'status-open';
     }
@@ -675,6 +696,9 @@ tbody tr:hover {
     function statusLabel(s) {
         if (s === 'OPEN') return 'Mới';
         if (s === 'IN_PROGRESS') return 'Đang làm';
+        if (s === 'SUBMITTED') return 'Đã nộp';
+        if (s === 'REVIEWED') return 'Đã review';
+        if (s === 'DENIED') return 'Từ chối';
         if (s === 'COMPLETED') return 'Hoàn thành';
         return s || '--';
     }
@@ -701,6 +725,9 @@ tbody tr:hover {
                 '<select class="task-status-select" data-task-id="' + t.id + '" data-task-row="' + rowId + '">' +
                 '<option value="OPEN"' + (status === 'OPEN' ? ' selected' : '') + '>Mới</option>' +
                 '<option value="IN_PROGRESS"' + (status === 'IN_PROGRESS' ? ' selected' : '') + '>Đang làm</option>' +
+                '<option value="SUBMITTED"' + (status === 'SUBMITTED' ? ' selected' : '') + '>Đã nộp</option>' +
+                '<option value="REVIEWED"' + (status === 'REVIEWED' ? ' selected' : '') + '>Đã review</option>' +
+                '<option value="DENIED"' + (status === 'DENIED' ? ' selected' : '') + '>Từ chối</option>' +
                 '<option value="COMPLETED"' + (status === 'COMPLETED' ? ' selected' : '') + '>Hoàn thành</option>' +
                 '</select> ' +
                 '<button type="button" class="btn-sm btn-edit task-btn-update" data-task-id="' + t.id + '">Cập nhật</button> ' +
@@ -773,7 +800,7 @@ tbody tr:hover {
     document.querySelectorAll('.filter-pill button').forEach(function(btn) {
         btn.addEventListener('click', function() {
             var f = btn.getAttribute('data-filter');
-            taskFilter = (f === 'IN_PROGRESS' || f === 'COMPLETED') ? f : 'ALL';
+            taskFilter = (f && f !== 'ALL' && ['IN_PROGRESS', 'SUBMITTED', 'REVIEWED', 'DENIED', 'COMPLETED'].indexOf(f) !== -1) ? f : 'ALL';
             document.querySelectorAll('.filter-pill button').forEach(function(b) { b.classList.remove('active'); });
             btn.classList.add('active');
             renderTasksTable(filteredTaskList());

@@ -73,6 +73,13 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
   </div>
 </div>
 
+<div class="card" id="completeReviewCard" style="display:none;">
+  <h2>Hoàn tất review</h2>
+  <p id="completeReviewDesc" style="font-size:13px;color:#94a3b8;margin-bottom:12px;">Đã duyệt/từ chối tất cả annotation. Bấm nút bên dưới để chuyển task sang trạng thái <strong>REVIEWED</strong> (Manager xem trên Dashboard).</p>
+  <button type="button" class="btn btn-approve" id="btnCompleteReview">Hoàn tất review → Dashboard Manager</button>
+  <p id="completeReviewMsg" style="margin-top:10px;font-size:13px;"></p>
+</div>
+
 <div id="msg"></div>
 
 <div class="modal" id="rejectModal">
@@ -170,8 +177,21 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
       });
 
       loading.style.display = 'none';
+      var totalAnnotations = (annotations || []).length;
+      var allReviewed = totalAnnotations > 0 && pending.length === 0;
+      var completeCard = document.getElementById('completeReviewCard');
+      var completeBtn = document.getElementById('btnCompleteReview');
+      var completeMsg = document.getElementById('completeReviewMsg');
+      if (completeCard) {
+        if (allReviewed) {
+          completeCard.style.display = 'block';
+          if (completeMsg) completeMsg.textContent = '';
+        } else {
+          completeCard.style.display = 'none';
+        }
+      }
       if (pending.length === 0) {
-        intro.textContent = 'Không còn annotation nào chờ review. Tất cả đã được duyệt hoặc chưa có annotator gửi.';
+        intro.textContent = totalAnnotations === 0 ? 'Chưa có annotation nào. Annotator cần gắn nhãn và nộp task.' : 'Không còn annotation nào chờ review. Tất cả đã được duyệt.';
         table.style.display = 'none';
         return;
       }
@@ -228,11 +248,15 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     }).then(function(r) {
-      return r.json().then(function() {
-        if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
-        return {};
-      }).catch(function() {
-        if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+      return r.text().then(function(text) {
+        if (!r.ok) {
+          var errMsg = r.status + ' ' + r.statusText;
+          try {
+            var d = JSON.parse(text);
+            if (d && (d.message || d.error)) errMsg = d.message || d.error;
+          } catch (e) {}
+          throw new Error(errMsg);
+        }
         return {};
       });
     }).then(function() {
@@ -261,6 +285,36 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
       pendingReject = null;
     }
   });
+
+  function doCompleteReview() {
+    var btn = document.getElementById('btnCompleteReview');
+    var msgEl = document.getElementById('completeReviewMsg');
+    if (!btn || btn.disabled) return;
+    btn.disabled = true;
+    if (msgEl) { msgEl.textContent = 'Đang xử lý...'; msgEl.style.color = '#94a3b8'; }
+    API.fetchWithAuth(cfg.tasks + '/' + taskId + '/complete-review', { method: 'PATCH' }).then(function(r) {
+      if (!r.ok) return r.text().then(function(t) {
+        var err = new Error(r.status + ' ' + r.statusText);
+        try { var d = JSON.parse(t); if (d && d.message) err.message = d.message; } catch (e) {}
+        throw err;
+      });
+      return r.json();
+    }).then(function() {
+      if (msgEl) {
+        msgEl.textContent = 'Đã hoàn tất. Đang chuyển về Dashboard...';
+        msgEl.style.color = '#4ade80';
+      }
+      window.location.href = 'user-dashboard.html';
+    }).catch(function(err) {
+      if (msgEl) {
+        msgEl.textContent = 'Lỗi: ' + (err.message || '');
+        msgEl.style.color = '#f87171';
+      }
+      if (btn) btn.disabled = false;
+    });
+  }
+  var completeReviewBtn = document.getElementById('btnCompleteReview');
+  if (completeReviewBtn) completeReviewBtn.addEventListener('click', doCompleteReview);
 
   loadTask().then(function() { render(); }).catch(function(err) {
     document.getElementById('taskMeta').textContent = 'Lỗi: ' + (err.message || '');

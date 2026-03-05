@@ -42,6 +42,8 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
 #msg.err { color: #f87171; }
 #msg.ok { color: #4ade80; }
 .loading { color: #94a3b8; }
+.rejection-item { background: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; padding: 10px 12px; margin-bottom: 8px; border-radius: 6px; font-size: 13px; }
+.rejection-item .reason { color: #fca5a5; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -86,6 +88,19 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
 <div class="card">
   <h2>Annotations đã gửi trong task này</h2>
   <div id="annotationList">Đang tải...</div>
+</div>
+
+<div class="card" id="rejectionReasonsCard" style="display:none;">
+  <h2>Lý do từ chối từ Reviewer</h2>
+  <p id="rejectionReasonsIntro" style="font-size:13px;color:#fbbf24;margin-bottom:10px;">Task đã bị trả lại (DENIED). Vui lòng xem lý do bên dưới và sửa lại nhãn cho đúng.</p>
+  <div id="rejectionReasonsList"></div>
+</div>
+
+<div class="card" id="submitForReviewCard" style="display:none;">
+  <h2>Nộp task để Reviewer kiểm duyệt</h2>
+  <p id="submitForReviewDesc" style="font-size:13px;color:#94a3b8;margin-bottom:12px;">Sau khi gắn nhãn xong tất cả item, bấm nút bên dưới để chuyển task sang trạng thái <strong>Đã nộp (SUBMITTED)</strong>.</p>
+  <button type="button" class="btn btn-submit" id="btnSubmitForReview">Nộp để review</button>
+  <p id="submitForReviewMsg" style="margin-top:10px;font-size:13px;"></p>
 </div>
 
 <script src="api-config.js"></script>
@@ -213,6 +228,35 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
     });
   }
 
+  function loadReviewFeedbacks() {
+    return API.fetchWithAuth(cfg.reviewFeedbacks + '/task/' + taskId + '?page=0&size=100').then(safeJson).then(function(data) {
+      return (data && data.content) ? data.content : [];
+    }).catch(function() { return []; });
+  }
+
+  function renderRejectionReasons(feedbacks) {
+    var card = document.getElementById('rejectionReasonsCard');
+    var listEl = document.getElementById('rejectionReasonsList');
+    if (!card || !listEl) return;
+    var rejected = (feedbacks || []).filter(function(f) { return (f.status || '').toString() === 'REJECTED'; });
+    var status = (task && task.status || '').toString();
+    if (rejected.length === 0 && status !== 'DENIED') {
+      card.style.display = 'none';
+      return;
+    }
+    if (rejected.length === 0) {
+      card.style.display = 'block';
+      listEl.innerHTML = '<p style="color:#94a3b8;">Chưa có lý do chi tiết. Reviewer đã từ chối task.</p>';
+      return;
+    }
+    card.style.display = 'block';
+    listEl.innerHTML = rejected.map(function(f) {
+      var itemId = (f.dataItemId || f.taskItemId || '').toString().substring(0, 8);
+      var comment = (f.comment || 'Không nêu lý do.').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return '<div class="rejection-item"><strong>Data item ' + itemId + '...</strong><div class="reason">' + comment + '</div></div>';
+    }).join('');
+  }
+
   function renderItems() {
     var intro = document.getElementById('itemsIntro');
     var table = document.getElementById('taskItemsTable');
@@ -236,7 +280,11 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
       var taskItemId = (item.taskItemId || '').toString();
       var dataItemId = (item.dataItemId || '').toString();
       var url = resolveContentUrl(item.contentUrl);
-      var hasAnn = item.hasAnnotation || annotationsByTaskItem[taskItemId];
+      var ann = annotationsByTaskItem[taskItemId];
+      var hasAnn = item.hasAnnotation || ann;
+      var isRejected = ann && (ann.status === 'REJECTED' || ann.status === 'Rejected');
+      var annotationId = ann && ann.id ? (typeof ann.id === 'string' ? ann.id : String(ann.id)) : '';
+      var currentContent = (ann && ann.content) ? String(ann.content) : '';
       var contentCell = '';
       if (url) {
         if (isImageUrl(url)) {
@@ -248,11 +296,13 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
         contentCell = '<span style="color:#94a3b8">—</span>';
       }
       var selectOpts = labels.map(function(l) {
-        return '<option value="' + (l.id || '') + '">' + (l.name || l.id) + '</option>';
+        var name = (l.name || l.id || '');
+        var selected = (currentContent && name === currentContent) ? ' selected' : '';
+        return '<option value="' + (l.id || '') + '"' + selected + '>' + name + '</option>';
       }).join('');
       var selectHtml = '<select class="item-label-select" data-task-item-id="' + taskItemId + '"><option value="">-- Chọn nhãn --</option>' + selectOpts + '</select>';
-      var statusText = hasAnn ? '<span class="badge">Đã gắn nhãn</span>' : '<span style="color:#94a3b8">Chưa</span>';
-      var btnHtml = hasAnn ? '—' : '<button type="button" class="btn btn-submit item-btn-submit" data-task-item-id="' + taskItemId + '">Gắn nhãn</button>';
+      var statusText = hasAnn ? (isRejected ? '<span class="badge" style="background:rgba(239,68,68,0.2);color:#fca5a5;">Bị từ chối</span>' : '<span class="badge">Đã gắn nhãn</span>') : '<span style="color:#94a3b8">Chưa</span>';
+      var btnHtml = hasAnn ? (isRejected ? '<button type="button" class="btn btn-submit item-btn-update" data-task-item-id="' + taskItemId + '" data-annotation-id="' + annotationId + '">Sửa nhãn</button>' : '—') : '<button type="button" class="btn btn-submit item-btn-submit" data-task-item-id="' + taskItemId + '">Gắn nhãn</button>';
       return '<tr data-task-item-id="' + taskItemId + '">' +
         '<td>' + (idx + 1) + '</td>' +
         '<td><span class="id-short">' + taskItemId.substring(0, 8) + '...</span></td>' +
@@ -287,6 +337,7 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
             loadTaskItems().then(function(items) {
               taskItems = items;
               renderItems();
+              updateSubmitForReviewCard();
             });
           });
         }).catch(function(err) {
@@ -295,17 +346,129 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
         });
       });
     });
+    tbody.querySelectorAll('.item-btn-update').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var annotationId = btn.getAttribute('data-annotation-id');
+        var taskItemId = btn.getAttribute('data-task-item-id');
+        var row = tbody.querySelector('tr[data-task-item-id="' + taskItemId + '"]');
+        var select = row ? row.querySelector('.item-label-select') : null;
+        var labelId = select ? select.value : '';
+        var labelObj = labels.find(function(l) { return (l.id || '').toString() === labelId; });
+        var content = labelObj ? (labelObj.name || labelId) : labelId;
+        if (!content || content === '-- Chọn nhãn --') {
+          alert('Vui lòng chọn nhãn mới để sửa.');
+          return;
+        }
+        if (!annotationId) return;
+        btn.disabled = true;
+        API.fetchWithAuth(cfg.annotations + '/' + annotationId + '/content?content=' + encodeURIComponent(content), {
+          method: 'PATCH'
+        }).then(function(r) {
+          if (!r.ok) return r.text().then(function(t) {
+            var err = new Error(r.status + ' ' + r.statusText);
+            try { var d = JSON.parse(t); if (d && d.message) err.message = d.message; } catch (e) {}
+            throw err;
+          });
+          return r.json();
+        }).then(function() {
+          loadAnnotations().then(function() {
+            loadTaskItems().then(function(items) {
+              taskItems = items;
+              renderItems();
+              updateSubmitForReviewCard();
+            });
+          });
+        }).catch(function(err) {
+          alert('Lỗi: ' + (err.message || ''));
+          btn.disabled = false;
+        });
+      });
+    });
+    updateSubmitForReviewCard();
+  }
+
+  function updateSubmitForReviewCard() {
+    var card = document.getElementById('submitForReviewCard');
+    var desc = document.getElementById('submitForReviewDesc');
+    var btn = document.getElementById('btnSubmitForReview');
+    var msg = document.getElementById('submitForReviewMsg');
+    if (!card || !task) return;
+    var status = (task.status || '').toString();
+    if (status === 'SUBMITTED' || status === 'REVIEWED') {
+      card.style.display = 'block';
+      if (btn) btn.style.display = 'none';
+      desc.textContent = status === 'SUBMITTED' ? 'Task đã nộp, đang chờ Reviewer kiểm duyệt.' : 'Task đã được Reviewer duyệt (REVIEWED).';
+      msg.textContent = '';
+      return;
+    }
+    var allLabeled = taskItems.length > 0 && taskItems.every(function(item) {
+      return item.hasAnnotation || annotationsByTaskItem[(item.taskItemId || '').toString()];
+    });
+    if (status === 'DENIED') {
+      card.style.display = 'block';
+      if (btn) {
+        if (allLabeled) {
+          btn.style.display = 'inline-block';
+          btn.disabled = false;
+          desc.textContent = 'Đã sửa nhãn xong. Bấm "Nộp để review" để gửi lại cho Reviewer.';
+        } else {
+          btn.style.display = 'none';
+          desc.textContent = 'Task bị từ chối (DENIED). Xem lý do từ Reviewer ở khung "Lý do từ chối từ Reviewer" phía trên và sửa lại nhãn, sau đó nộp lại.';
+        }
+      }
+      msg.textContent = '';
+      return;
+    }
+    if (status === 'IN_PROGRESS' && allLabeled) {
+      card.style.display = 'block';
+      if (btn) { btn.style.display = 'inline-block'; btn.disabled = false; }
+      desc.textContent = 'Đã gắn nhãn xong tất cả item. Bấm "Nộp để review" để chuyển task sang trạng thái Đã nộp (SUBMITTED).';
+      msg.textContent = '';
+    } else {
+      card.style.display = 'block';
+      if (btn) btn.style.display = 'none';
+      desc.textContent = allLabeled ? 'Task chưa ở trạng thái Đang làm (IN_PROGRESS).' : 'Gắn nhãn đủ tất cả item trước khi nộp.';
+      msg.textContent = '';
+    }
+  }
+
+  function doSubmitForReview() {
+    var btn = document.getElementById('btnSubmitForReview');
+    var msg = document.getElementById('submitForReviewMsg');
+    if (!btn || btn.disabled) return;
+    btn.disabled = true;
+    msg.textContent = 'Đang gửi...';
+    msg.style.color = '#94a3b8';
+    API.fetchWithAuth(cfg.tasks + '/' + taskId + '/submit', { method: 'PATCH' }).then(function(r) {
+      if (!r.ok) return r.json().then(function(d) { throw new Error(d.message || 'Nộp thất bại'); });
+      return r.json();
+    }).then(function(updated) {
+      if (updated && updated.status) task.status = updated.status;
+      msg.textContent = 'Đã nộp. Task chuyển sang trạng thái SUBMITTED, Reviewer có thể vào kiểm duyệt.';
+      msg.style.color = '#4ade80';
+      updateSubmitForReviewCard();
+    }).catch(function(err) {
+      msg.textContent = 'Lỗi: ' + (err.message || '');
+      msg.style.color = '#f87171';
+      btn.disabled = false;
+    });
   }
 
   window._taskItemsLoadError = null;
+  var submitBtn = document.getElementById('btnSubmitForReview');
+  if (submitBtn) submitBtn.addEventListener('click', doSubmitForReview);
+
   loadTask().then(function(t) {
     return Promise.all([
       loadLabels(t.projectId).catch(function() { return []; }),
       loadTaskItems(),
-      loadAnnotations().catch(function() { return []; })
+      loadAnnotations().catch(function() { return []; }),
+      loadReviewFeedbacks()
     ]);
-  }).then(function() {
+  }).then(function(results) {
+    var feedbacks = results[3] || [];
     renderItems();
+    renderRejectionReasons(feedbacks);
   }).catch(function(err) {
     document.getElementById('taskMeta').textContent = 'Lỗi: ' + (err.message || '');
     document.getElementById('itemsIntro').textContent = 'Không tải được dữ liệu.';
