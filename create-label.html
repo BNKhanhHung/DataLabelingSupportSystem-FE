@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tạo Label - Data Labeling</title>
+<style>
+body{font-family:sans-serif;background:#0f172a;color:white;padding:40px}
+input,textarea,select{width:100%;padding:10px;margin:10px 0;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;box-sizing:border-box}
+button{padding:10px 20px;background:#22c55e;border:none;color:white;border-radius:6px;cursor:pointer}
+button:disabled{opacity:0.6;cursor:not-allowed}
+.card{background:#1e293b;padding:30px;border-radius:12px;max-width:600px}
+a{color:#38bdf8}
+#msg{margin-top:12px;font-size:14px}
+label{display:block;margin-top:8px;color:#94a3b8;font-size:14px}
+.color-preview{width:24px;height:24px;border-radius:6px;display:inline-block;vertical-align:middle;margin-left:8px;border:1px solid #334155}
+</style>
+</head>
+<body>
+
+<div class="card">
+<h2>Tạo Label mới</h2>
+<p style="color:#94a3b8;margin-bottom:16px;">Label thuộc một dự án, dùng cho annotator gắn nhãn cho dữ liệu.</p>
+<form id="form">
+  <label>Dự án *</label>
+  <select id="projectId" required>
+    <option value="">-- Chọn dự án --</option>
+  </select>
+  <label>Tên Label *</label>
+  <input type="text" id="name" placeholder="Ví dụ: Positive, Negative, Neutral" required>
+  <label>Mô tả</label>
+  <textarea id="description" rows="2" placeholder="Mô tả label (tùy chọn)"></textarea>
+  <label>Màu (hex, ví dụ #22c55e)</label>
+  <input type="text" id="color" placeholder="#22c55e" maxlength="20">
+  <span class="color-preview" id="colorPreview" style="background:#22c55e;"></span>
+  <button type="submit" id="btn">Tạo Label</button>
+  <a href="manager.html" style="display:inline-block;margin-top:12px;">← Quay lại Manager</a>
+</form>
+<p id="msg"></p>
+</div>
+
+<script src="api-config.js"></script>
+<script src="api-helper.js"></script>
+<script>
+(function() {
+  var API = window.API;
+  var cfg = window.API_CONFIG;
+  if (!API || !API.requireAuth()) return;
+  var role = (localStorage.getItem('systemRole') || '').toUpperCase();
+  if (role !== 'ADMIN' && role !== 'MANAGER') {
+    window.location.href = 'user-dashboard.html';
+    return;
+  }
+
+  var projectSelect = document.getElementById('projectId');
+  var colorInput = document.getElementById('color');
+  var colorPreview = document.getElementById('colorPreview');
+  var form = document.getElementById('form');
+  var btn = document.getElementById('btn');
+  var msg = document.getElementById('msg');
+
+  colorInput.addEventListener('input', function() {
+    var v = (this.value || '').trim();
+    colorPreview.style.background = v && /^#[0-9A-Fa-f]{3,6}$/.test(v) ? v : '#22c55e';
+  });
+
+  API.fetchWithAuth(cfg.projects + '?page=0&size=100').then(function(r) { return r.json(); }).then(function(data) {
+    var list = data.content || [];
+    projectSelect.innerHTML = '<option value="">-- Chọn dự án --</option>' + list.map(function(p) {
+      return '<option value="' + p.id + '">' + (p.name || p.id) + '</option>';
+    }).join('');
+  }).catch(function() { projectSelect.innerHTML = '<option value="">Lỗi tải dự án</option>'; });
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    var projectId = projectSelect.value;
+    var name = document.getElementById('name').value.trim();
+    if (!projectId) { msg.textContent = 'Vui lòng chọn dự án.'; msg.style.color = '#f87171'; return; }
+    if (!name) { msg.textContent = 'Vui lòng nhập tên label.'; msg.style.color = '#f87171'; return; }
+    var color = document.getElementById('color').value.trim() || null;
+    btn.disabled = true;
+    msg.textContent = 'Đang tạo...';
+    msg.style.color = '#94a3b8';
+    API.fetchWithAuth(cfg.labels, {
+      method: 'POST',
+      body: JSON.stringify({
+        projectId: projectId,
+        name: name,
+        description: document.getElementById('description').value.trim() || null,
+        color: color
+      })
+    }).then(function(r) { return r.json(); }).then(function() {
+      msg.textContent = 'Tạo label thành công.';
+      msg.style.color = '#4ade80';
+      document.getElementById('name').value = '';
+      document.getElementById('description').value = '';
+      document.getElementById('color').value = '';
+      colorPreview.style.background = '#22c55e';
+      setTimeout(function() { window.location.href = 'manager.html'; }, 1500);
+    }).catch(function(err) {
+      msg.textContent = 'Lỗi: ' + (err.message || 'Tạo thất bại');
+      msg.style.color = '#f87171';
+    }).finally(function() { btn.disabled = false; });
+  });
+})();
+</script>
+</body>
+</html>

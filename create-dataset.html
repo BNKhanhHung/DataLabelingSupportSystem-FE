@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tạo Dataset - Data Labeling</title>
+<style>
+body{font-family:sans-serif;background:#0f172a;color:white;padding:40px}
+input,textarea,select{width:100%;padding:10px;margin:10px 0;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;box-sizing:border-box}
+button{padding:10px 20px;background:#22c55e;border:none;color:white;border-radius:6px;cursor:pointer}
+button:disabled{opacity:0.6;cursor:not-allowed}
+.card{background:#1e293b;padding:30px;border-radius:12px;max-width:600px}
+a{color:#38bdf8}
+#msg{margin-top:12px;font-size:14px}
+label{display:block;margin-top:8px;color:#94a3b8;font-size:14px}
+</style>
+</head>
+<body>
+
+<div class="card">
+<h2>Tạo Dataset mới</h2>
+<p style="color:#94a3b8;margin-bottom:16px;">Dataset thuộc một dự án, dùng để chứa các data item.</p>
+<form id="form">
+  <label>Dự án *</label>
+  <select id="projectId" required>
+    <option value="">-- Chọn dự án --</option>
+  </select>
+  <label>Tên Dataset *</label>
+  <input type="text" id="name" placeholder="Ví dụ: Ảnh train batch 1" required maxlength="150">
+  <label>Mô tả</label>
+  <textarea id="description" rows="3" placeholder="Mô tả dataset (tùy chọn)" maxlength="500"></textarea>
+  <button type="submit" id="btn">Tạo Dataset</button>
+  <a href="manager.html" style="display:inline-block;margin-top:12px;">← Quay lại Manager</a>
+</form>
+<p id="msg"></p>
+</div>
+
+<script src="api-config.js"></script>
+<script src="api-helper.js"></script>
+<script>
+(function() {
+  var API = window.API;
+  var cfg = window.API_CONFIG;
+  if (!API || !API.requireAuth()) return;
+  var role = (localStorage.getItem('systemRole') || '').toUpperCase();
+  if (role !== 'ADMIN' && role !== 'MANAGER') {
+    window.location.href = 'user-dashboard.html';
+    return;
+  }
+
+  var projectSelect = document.getElementById('projectId');
+  var form = document.getElementById('form');
+  var btn = document.getElementById('btn');
+  var msg = document.getElementById('msg');
+
+  API.fetchWithAuth(cfg.projects + '?page=0&size=100').then(function(r) { return r.json(); }).then(function(data) {
+    var list = data.content || [];
+    projectSelect.innerHTML = '<option value="">-- Chọn dự án --</option>' + list.map(function(p) {
+      return '<option value="' + p.id + '">' + (p.name || p.id) + '</option>';
+    }).join('');
+  }).catch(function() { projectSelect.innerHTML = '<option value="">Lỗi tải dự án</option>'; });
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    var projectId = projectSelect.value;
+    var name = document.getElementById('name').value.trim();
+    if (!projectId) { msg.textContent = 'Vui lòng chọn dự án.'; msg.style.color = '#f87171'; return; }
+    if (!name) { msg.textContent = 'Vui lòng nhập tên dataset.'; msg.style.color = '#f87171'; return; }
+    btn.disabled = true;
+    msg.textContent = 'Đang tạo...';
+    msg.style.color = '#94a3b8';
+    API.fetchWithAuth(cfg.datasets, {
+      method: 'POST',
+      body: JSON.stringify({
+        projectId: projectId,
+        name: name,
+        description: document.getElementById('description').value.trim() || null
+      })
+    }).then(function(r) { return r.json(); }).then(function() {
+      msg.textContent = 'Tạo dataset thành công.';
+      msg.style.color = '#4ade80';
+      document.getElementById('name').value = '';
+      document.getElementById('description').value = '';
+      setTimeout(function() { window.location.href = 'manager.html'; }, 1500);
+    }).catch(function(err) {
+      msg.textContent = 'Lỗi: ' + (err.message || 'Tạo thất bại');
+      msg.style.color = '#f87171';
+    }).finally(function() { btn.disabled = false; });
+  });
+})();
+</script>
+</body>
+</html>

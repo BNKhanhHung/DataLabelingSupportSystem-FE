@@ -81,7 +81,7 @@ a.link-btn:hover { text-decoration: underline; }
   </div>
 
   <div class="section">
-    <h2>Task cần review <a href="reviewer-review.html">Xem feedback</a></h2>
+    <h2>Task cần review <a href="reviewer-tasks.html">Xem tất cả task</a> · <a href="reviewer-review.html">Lịch sử review</a></h2>
     <table>
       <thead><tr><th>Dự án</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
       <tbody id="reviewerTasksBody"><tr><td colspan="3" class="loading">Đang tải...</td></tr></tbody>
@@ -108,26 +108,6 @@ a.link-btn:hover { text-decoration: underline; }
   }
   document.getElementById('logoutLi').addEventListener('click', logout);
 
-  var userId = localStorage.getItem('userId');
-  if (!userId) {
-    document.getElementById('profileGrid').innerHTML = '<p class="empty">Chưa đăng nhập.</p>';
-    document.getElementById('annotatorTasksBody').innerHTML = '<tr><td colspan="3" class="empty">Vui lòng đăng nhập.</td></tr>';
-    document.getElementById('reviewerTasksBody').innerHTML = '<tr><td colspan="3" class="empty">Vui lòng đăng nhập.</td></tr>';
-    return;
-  }
-
-  API.fetchWithAuth(cfg.users + '/me').then(function(r) { return r.json(); }).then(function(me) {
-    document.getElementById('pUsername').textContent = me.username || '--';
-    document.getElementById('pEmail').textContent = me.email || '--';
-    document.getElementById('pRole').textContent = (me.systemRole || 'USER');
-    document.getElementById('pStatus').textContent = (me.status || 'ACTIVE');
-  }).catch(function() {
-    document.getElementById('pUsername').textContent = localStorage.getItem('username') || '--';
-    document.getElementById('pEmail').textContent = localStorage.getItem('userEmail') || '--';
-    document.getElementById('pRole').textContent = role || 'USER';
-    document.getElementById('pStatus').textContent = '--';
-  });
-
   function renderTaskRows(list, tbodyId, linkLabel, linkPath) {
     var tbody = document.getElementById(tbodyId);
     if (!list || list.length === 0) {
@@ -135,21 +115,48 @@ a.link-btn:hover { text-decoration: underline; }
       return;
     }
     tbody.innerHTML = list.slice(0, 10).map(function(t) {
-      var href = linkPath === 'annotator-label.html' ? (linkPath + '?taskId=' + t.id) : linkPath;
-      return '<tr><td>' + (t.projectName || '') + '</td><td>' + (t.status || '') + '</td><td><a href="' + href + '" class="link-btn">' + linkLabel + '</a></td></tr>';
+      var tid = '';
+      if (t != null && (t.id != null || t.taskId != null)) tid = typeof (t.id || t.taskId) === 'string' ? (t.id || t.taskId) : String(t.id || t.taskId);
+      var withTaskId = (linkPath === 'annotator-label.html' || linkPath === 'reviewer-task-review.html');
+      var href = withTaskId ? (linkPath + '?taskId=' + encodeURIComponent(tid)) : linkPath;
+      var safeTid = (tid || '').replace(/"/g, '&quot;');
+      var extra = withTaskId ? (' data-task-id="' + safeTid + '" onclick="sessionStorage.setItem(\'pendingTaskId\', this.getAttribute(\'data-task-id\'))"') : '';
+      return '<tr><td>' + (t.projectName || '') + '</td><td>' + (t.status || '') + '</td><td><a href="' + href + '" class="link-btn"' + extra + '>' + linkLabel + '</a></td></tr>';
     }).join('');
   }
 
-  API.fetchWithAuth(cfg.tasks + '/annotator/' + userId + '?page=0&size=20').then(function(r) { return r.json(); }).then(function(data) {
-    renderTaskRows(data.content || [], 'annotatorTasksBody', 'Gắn nhãn', 'annotator-label.html');
-  }).catch(function() {
-    document.getElementById('annotatorTasksBody').innerHTML = '<tr><td colspan="3" class="empty">Không tải được.</td></tr>';
-  });
+  function loadTasks(uid) {
+    if (!uid) {
+      document.getElementById('annotatorTasksBody').innerHTML = '<tr><td colspan="3" class="empty">Vui lòng đăng nhập.</td></tr>';
+      document.getElementById('reviewerTasksBody').innerHTML = '<tr><td colspan="3" class="empty">Vui lòng đăng nhập.</td></tr>';
+      return;
+    }
+    API.fetchWithAuth(cfg.tasks + '/annotator/' + uid + '?page=0&size=20').then(function(r) { return r.json(); }).then(function(data) {
+      renderTaskRows(data.content || [], 'annotatorTasksBody', 'Gắn nhãn', 'annotator-label.html');
+    }).catch(function() {
+      document.getElementById('annotatorTasksBody').innerHTML = '<tr><td colspan="3" class="empty">Không tải được.</td></tr>';
+    });
+    API.fetchWithAuth(cfg.tasks + '/reviewer/' + uid + '?page=0&size=20').then(function(r) { return r.json(); }).then(function(data) {
+      renderTaskRows(data.content || [], 'reviewerTasksBody', 'Review', 'reviewer-task-review.html');
+    }).catch(function() {
+      document.getElementById('reviewerTasksBody').innerHTML = '<tr><td colspan="3" class="empty">Không tải được.</td></tr>';
+    });
+  }
 
-  API.fetchWithAuth(cfg.tasks + '/reviewer/' + userId + '?page=0&size=20').then(function(r) { return r.json(); }).then(function(data) {
-    renderTaskRows(data.content || [], 'reviewerTasksBody', 'Review', 'reviewer-review.html');
+  API.fetchWithAuth(cfg.users + '/me').then(function(r) { return r.json(); }).then(function(me) {
+    document.getElementById('pUsername').textContent = me.username || '--';
+    document.getElementById('pEmail').textContent = me.email || '--';
+    document.getElementById('pRole').textContent = (me.systemRole || 'USER');
+    document.getElementById('pStatus').textContent = (me.status || 'ACTIVE');
+    var uid = (me.id != null ? String(me.id) : null) || localStorage.getItem('userId');
+    if (me.id != null && !localStorage.getItem('userId')) localStorage.setItem('userId', String(me.id));
+    loadTasks(uid);
   }).catch(function() {
-    document.getElementById('reviewerTasksBody').innerHTML = '<tr><td colspan="3" class="empty">Không tải được.</td></tr>';
+    document.getElementById('pUsername').textContent = localStorage.getItem('username') || '--';
+    document.getElementById('pEmail').textContent = localStorage.getItem('userEmail') || '--';
+    document.getElementById('pRole').textContent = role || 'USER';
+    document.getElementById('pStatus').textContent = '--';
+    loadTasks(localStorage.getItem('userId'));
   });
 })();
 </script>
