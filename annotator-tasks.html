@@ -54,9 +54,15 @@ a.back{background:#475569}
     }
     msgEl.textContent = 'Đang tải...';
     msgEl.style.color = '#94a3b8';
-    API.fetchWithAuth(cfg.tasks + '/annotator/' + uid + '?page=0&size=50').then(function(r) { return r.json(); }).then(function(data) {
-      var list = data.content || [];
-      msgEl.textContent = list.length === 0 ? 'Bạn chưa có task nào.' : 'Tổng: ' + list.length + ' task.';
+    var annotatorReq = API.fetchWithAuth(cfg.tasks + '/annotator/' + uid + '?page=0&size=50').then(function(r) { return r.json(); });
+    var reviewerReq = API.fetchWithAuth(cfg.tasks + '/reviewer/' + uid + '?page=0&size=50').then(function(r) { return r.json(); });
+    Promise.all([annotatorReq, reviewerReq]).then(function(results) {
+      var annotatorData = results[0] || {};
+      var reviewerData = results[1] || {};
+      var annotatorList = (annotatorData.content || []).map(function(t) { t._type = 'annotator'; return t; });
+      var reviewerList = (reviewerData.content || []).map(function(t) { t._type = 'reviewer'; return t; });
+      var list = annotatorList.concat(reviewerList);
+      msgEl.textContent = list.length === 0 ? 'Bạn chưa có task nào.' : 'Tổng: ' + list.length + ' task (gán nhãn + review).';
       var html = list.length === 0 ? '<p>Chưa có task được giao.</p>' : list.map(function(t) {
         var status = t.status || 'OPEN';
         var tid = '';
@@ -65,7 +71,12 @@ a.back{background:#475569}
           tid = raw != null ? (typeof raw === 'string' ? raw : String(raw)) : '';
         }
         var safeTid = (tid || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-        return '<div class="card"><div><p><strong>' + (t.projectName || 'Project') + '</strong></p><p>Task ID: ' + (t.id != null ? (typeof t.id === 'string' ? t.id : String(t.id)) : '') + ' · Trạng thái: ' + status + '</p></div><a href="annotator-label.html?taskId=' + encodeURIComponent(tid) + '" class="btn" data-task-id="' + safeTid + '" onclick="sessionStorage.setItem(\'pendingTaskId\', this.getAttribute(\'data-task-id\'))">Bắt đầu gắn nhãn</a></div>';
+        var isReview = t._type === 'reviewer';
+        var label = isReview ? 'Review' : 'Gán nhãn';
+        var link = isReview ? 'reviewer-task-review.html' : 'annotator-label.html';
+        var btnText = isReview ? 'Vào review nhãn' : 'Bắt đầu gắn nhãn';
+        var storageKey = isReview ? 'pendingReviewTaskId' : 'pendingTaskId';
+        return '<div class="card"><div><p><strong>' + (t.projectName || 'Project') + '</strong></p><p><span style="color:#94a3b8">' + label + '</span> · Task ID: ' + (t.id != null ? (typeof t.id === 'string' ? t.id : String(t.id)) : '') + ' · Trạng thái: ' + status + '</p></div><a href="' + link + '?taskId=' + encodeURIComponent(tid) + '" class="btn" data-task-id="' + safeTid + '" onclick="sessionStorage.setItem(\'' + storageKey + '\', this.getAttribute(\'data-task-id\'))">' + btnText + '</a></div>';
       }).join('');
       listEl.innerHTML = html;
     }).catch(function(err) {
