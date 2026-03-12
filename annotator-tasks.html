@@ -5,12 +5,120 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Task của tôi - Data Labeling</title>
 <style>
-body{font-family:sans-serif;background:#0f172a;color:white;padding:40px}
-.card{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}
-button,a.btn{padding:8px 16px;background:#3b82f6;border:none;color:white;border-radius:6px;cursor:pointer;text-decoration:none;font-size:14px}
-a.back{background:#475569}
-#list{max-width:700px}
-#msg{margin-bottom:16px;color:#94a3b8}
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:system-ui;
+}
+
+body{
+background:#0f172a;
+color:white;
+padding:40px;
+}
+
+.container{
+max-width:900px;
+margin:auto;
+}
+
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:24px;
+}
+
+.header h2{
+font-size:24px;
+}
+
+.task-card{
+background:#1e293b;
+border-radius:12px;
+padding:18px;
+margin-bottom:14px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+transition:0.2s;
+border:1px solid #334155;
+}
+
+.task-card:hover{
+transform:translateY(-2px);
+background:#273449;
+}
+
+.task-info p{
+margin:4px 0;
+color:#cbd5f5;
+font-size:14px;
+}
+
+.task-title{
+font-size:16px;
+font-weight:600;
+color:white;
+}
+
+.task-status{
+font-size:12px;
+padding:4px 8px;
+border-radius:6px;
+background:#334155;
+margin-top:4px;
+display:inline-block;
+}
+
+.btn-start{
+background:#22c55e;
+border:none;
+padding:8px 16px;
+border-radius:8px;
+color:white;
+cursor:pointer;
+text-decoration:none;
+font-size:14px;
+}
+
+.btn-start:hover{
+background:#16a34a;
+}
+
+.nav{
+margin-bottom:24px;
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+}
+
+.nav a{
+padding:8px 14px;
+border-radius:8px;
+background:#334155;
+color:white;
+text-decoration:none;
+font-size:13px;
+}
+
+.nav a:hover{
+background:#475569;
+}
+
+#msg{
+margin-bottom:16px;
+color:#94a3b8;
+}
+
+.empty{
+background:#1e293b;
+padding:20px;
+border-radius:10px;
+text-align:center;
+color:#94a3b8;
+}
 </style>
 </head>
 <body>
@@ -45,6 +153,7 @@ a.back{background:#475569}
       } else done(null);
     }).catch(function() { done(null); });
   }
+
   function loadTasks(uid) {
     if (!uid) {
       msgEl.textContent = 'Không xác định được user. Vui lòng đăng nhập lại.';
