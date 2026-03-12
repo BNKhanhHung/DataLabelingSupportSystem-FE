@@ -596,10 +596,11 @@ tbody tr:hover {
                     <th>Tên dự án</th>
                     <th>Mô tả</th>
                     <th>Ngày tạo</th>
+                    <th>Thao tác</th>
                 </tr>
             </thead>
             <tbody id="projectsTableBody">
-                <tr><td colspan="3">Đang tải...</td></tr>
+                <tr><td colspan="4">Đang tải...</td></tr>
             </tbody>
         </table>
     </div>
@@ -661,18 +662,24 @@ tbody tr:hover {
         document.getElementById('tableCount').textContent = list.length + (data.totalElements !== undefined ? ' / ' + data.totalElements : '') + ' dự án';
         var tbody = document.getElementById('projectsTableBody');
         if (list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3">Chưa có dự án. <a href="create-project.html" style="color:#22c55e;">Tạo dự án</a></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4">Chưa có dự án. <a href="create-project.html" style="color:#22c55e;">Tạo dự án</a></td></tr>';
             return;
         }
         tbody.innerHTML = list.map(function(p) {
             var created = p.createdAt ? p.createdAt.substring(0, 10) : '--';
             var name = API.escapeHtml(p.name || '');
             var desc = API.escapeHtml(p.description || '');
-            return '<tr><td>' + name + '</td><td>' + desc + '</td><td>' + API.escapeHtml(created) + '</td></tr>';
+            var rawId = (p.id !== undefined && p.id !== null) ? p.id : ((p.projectId !== undefined && p.projectId !== null) ? p.projectId : null);
+            var pid = (rawId != null) ? String(rawId).trim() : '';
+            var detailHref = pid ? ('project-detail.html?projectId=' + encodeURIComponent(pid)) : '#';
+            var detailLink = pid
+              ? '<a href="' + detailHref + '" class="link-btn" style="color:#6ee7b7;" data-project-id="' + API.escapeHtml(pid) + '" onclick="sessionStorage.setItem(\'viewProjectId\', this.getAttribute(\'data-project-id\') || \'\')">Xem chi tiết</a>'
+              : '<span style="color:#64748b;">—</span>';
+            return '<tr><td>' + name + '</td><td>' + desc + '</td><td>' + API.escapeHtml(created) + '</td><td>' + detailLink + '</td></tr>';
         }).join('');
     }).catch(function(err) {
         var errMsg = API.escapeHtml(err.message || 'Unknown error');
-        document.getElementById('projectsTableBody').innerHTML = '<tr><td colspan="3">Lỗi: ' + errMsg + '</td></tr>';
+        document.getElementById('projectsTableBody').innerHTML = '<tr><td colspan="4">Lỗi: ' + errMsg + '</td></tr>';
     });
 
     API.fetchWithAuth(cfg.tasks + '?page=0&size=1').then(function(r) { return r.json(); }).then(function(data) {

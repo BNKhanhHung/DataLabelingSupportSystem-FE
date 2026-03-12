@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chi tiết dự án - Data Labeling</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+body {
+  min-height: 100vh;
+  background: linear-gradient(160deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  color: #f1f5f9;
+  padding: 24px;
+}
+.page { max-width: 960px; margin: 0 auto; }
+.nav-top { margin-bottom: 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.nav-top a {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: 10px; text-decoration: none; font-size: 14px;
+  background: rgba(30, 41, 59, 0.9); color: #94a3b8; border: 1px solid #334155;
+  transition: background 0.2s, color 0.2s;
+}
+.nav-top a:hover { background: #334155; color: #e2e8f0; }
+.card {
+  background: rgba(30, 41, 59, 0.95);
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 20px;
+  border: 1px solid #334155;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+}
+.card h2 { font-size: 18px; font-weight: 600; color: #e2e8f0; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #334155; }
+.card .meta { color: #94a3b8; font-size: 13px; margin-bottom: 8px; }
+.card .meta span { margin-right: 16px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 10px 12px; text-align: left; font-size: 13px; border-bottom: 1px solid #334155; }
+th { color: #94a3b8; font-weight: 500; }
+tbody tr:hover { background: rgba(15, 23, 42, 0.6); }
+.empty { color: #64748b; font-style: italic; }
+.loading { color: #94a3b8; }
+.id-short { font-family: monospace; font-size: 12px; color: #94a3b8; }
+a.link { color: #38bdf8; text-decoration: none; }
+a.link:hover { text-decoration: underline; }
+.dataset-block { margin-bottom: 20px; }
+.dataset-block h3 { font-size: 14px; color: #94a3b8; margin-bottom: 8px; }
+.content-preview { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+img.thumb { max-width: 80px; max-height: 60px; object-fit: contain; border-radius: 6px; vertical-align: middle; }
+#projectName { font-size: 22px; font-weight: 600; color: #f8fafc; margin-bottom: 8px; }
+#projectDesc { color: #94a3b8; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="nav-top">
+    <a href="manager.html">← Dashboard Manager</a>
+    <a href="create-project.html">Tạo dự án</a>
+  </div>
+
+  <div class="card" id="projectCard">
+    <div id="projectName">Đang tải...</div>
+    <div id="projectDesc"></div>
+    <div class="meta" id="projectMeta"></div>
+  </div>
+
+  <div class="card">
+    <h2>Labels (nhãn) thuộc dự án</h2>
+    <p class="meta" id="labelsMeta">Đang tải...</p>
+    <table>
+      <thead><tr><th>STT</th><th>ID</th><th>Tên</th><th>Mô tả</th></tr></thead>
+      <tbody id="labelsBody"><tr><td colspan="4" class="loading">Đang tải...</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Datasets thuộc dự án</h2>
+    <p class="meta" id="datasetsMeta">Đang tải...</p>
+    <table>
+      <thead><tr><th>STT</th><th>ID</th><th>Tên</th><th>Mô tả</th><th>Số data item</th></tr></thead>
+      <tbody id="datasetsBody"><tr><td colspan="5" class="loading">Đang tải...</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Data items (theo từng dataset)</h2>
+    <p class="meta" id="dataItemsMeta">Đang tải...</p>
+    <div id="dataItemsByDataset"></div>
+  </div>
+</div>
+
+<script src="api-config.js"></script>
+<script src="api-helper.js"></script>
+<script>
+(function() {
+  var API = window.API;
+  var cfg = window.API_CONFIG;
+  if (!API || !API.requireAuth()) return;
+  var role = (localStorage.getItem('systemRole') || '').toUpperCase();
+  if (role !== 'ADMIN' && role !== 'MANAGER') {
+    window.location.href = 'user-dashboard.html';
+    return;
+  }
+
+  var params = new URLSearchParams(window.location.search);
+  var projectId = (params.get('projectId') || params.get('id') || '').trim();
+  if (!projectId) projectId = (sessionStorage.getItem('viewProjectId') || '').trim();
+  if (projectId) {
+    sessionStorage.removeItem('viewProjectId');
+    if (!params.get('projectId') && !params.get('id')) history.replaceState(null, '', 'project-detail.html?projectId=' + encodeURIComponent(projectId));
+  }
+  if (!projectId) {
+    document.getElementById('projectName').textContent = 'Chưa chọn dự án';
+    document.getElementById('projectDesc').innerHTML = 'Vào <a class="link" href="manager.html">Dashboard Manager</a> → bảng Dự án → bấm &quot;Xem chi tiết&quot; ở một dự án để xem labels, datasets và data items. Hoặc thêm <code>?projectId=...</code> vào URL.';
+    document.getElementById('labelsBody').innerHTML = '<tr><td colspan="4" class="empty">Cần chọn dự án.</td></tr>';
+    document.getElementById('datasetsBody').innerHTML = '<tr><td colspan="5" class="empty">Cần chọn dự án.</td></tr>';
+    document.getElementById('labelsMeta').textContent = '';
+    document.getElementById('datasetsMeta').textContent = '';
+    document.getElementById('dataItemsMeta').textContent = '';
+    document.getElementById('dataItemsByDataset').innerHTML = '';
+    return;
+  }
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    var t = String(s);
+    return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function loadProject() {
+    return API.fetchWithAuth(cfg.projects + '/' + projectId).then(function(r) {
+      if (!r.ok) throw new Error('Không tải được dự án');
+      return r.json();
+    }).then(function(p) {
+      document.getElementById('projectName').textContent = p.name || '—';
+      document.getElementById('projectDesc').textContent = p.description || 'Không có mô tả.';
+      var meta = [];
+      if (p.id) meta.push('ID: ' + String(p.id).substring(0, 8) + '...');
+      if (p.createdAt) meta.push('Ngày tạo: ' + p.createdAt.substring(0, 10));
+      if (p.status) meta.push('Trạng thái: ' + p.status);
+      document.getElementById('projectMeta').innerHTML = meta.map(function(m) { return '<span>' + escapeHtml(m) + '</span>'; }).join('');
+      return p;
+    });
+  }
+
+  function loadLabels() {
+    return API.fetchWithAuth(cfg.labels + '/project/' + projectId + '?page=0&size=200').then(function(r) {
+      if (!r.ok) throw new Error('Không tải được labels');
+      return r.json();
+    }).then(function(data) {
+      var list = data.content || [];
+      document.getElementById('labelsMeta').textContent = 'Tổng: ' + list.length + ' label.';
+      var tbody = document.getElementById('labelsBody');
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty">Chưa có label nào. Tạo label thuộc dự án này tại trang Tạo label.</td></tr>';
+        return list;
+      }
+      tbody.innerHTML = list.map(function(l, i) {
+        var id = (l.id || '').toString();
+        return '<tr><td>' + (i + 1) + '</td><td class="id-short">' + escapeHtml(id.substring(0, 8)) + '...</td><td>' + escapeHtml(l.name || '') + '</td><td>' + escapeHtml(l.description || '') + '</td></tr>';
+      }).join('');
+      return list;
+    }).catch(function(err) {
+      document.getElementById('labelsBody').innerHTML = '<tr><td colspan="4" class="empty">Lỗi: ' + escapeHtml(err.message) + '</td></tr>';
+      return [];
+    });
+  }
+
+  function loadDatasets() {
+    return API.fetchWithAuth(cfg.datasets + '/project/' + projectId + '?page=0&size=200').then(function(r) {
+      if (!r.ok) throw new Error('Không tải được datasets');
+      return r.json();
+    }).then(function(data) {
+      var list = data.content || [];
+      document.getElementById('datasetsMeta').textContent = 'Tổng: ' + list.length + ' dataset.';
+      var tbody = document.getElementById('datasetsBody');
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">Chưa có dataset nào. Tạo dataset thuộc dự án này tại trang Tạo dataset.</td></tr>';
+        return list;
+      }
+      return list;
+    }).catch(function(err) {
+      document.getElementById('datasetsBody').innerHTML = '<tr><td colspan="5" class="empty">Lỗi: ' + escapeHtml(err.message) + '</td></tr>';
+      return [];
+    });
+  }
+
+  function loadDataItemsForDataset(datasetId) {
+    return API.fetchWithAuth(cfg.dataItems + '/dataset/' + datasetId + '?page=0&size=500').then(function(r) {
+      if (!r.ok) return [];
+      return r.json();
+    }).then(function(data) {
+      return data.content || [];
+    }).catch(function() { return []; });
+  }
+
+  function isImageUrl(url) {
+    if (!url) return false;
+    return /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(url) || (url.indexOf('/api/uploads/') !== -1);
+  }
+
+  function resolveContentUrl(url) {
+    if (!url) return '';
+    if (url.indexOf('http') === 0) return url;
+    var base = (window.API_CONFIG && window.API_CONFIG.baseUrl) ? window.API_CONFIG.baseUrl.replace(/\/$/, '') : 'http://localhost:8080';
+    return base + (url.indexOf('/') === 0 ? url : '/' + url);
+  }
+
+  function renderDataItemsByDataset(datasets, itemsByDataset) {
+    var container = document.getElementById('dataItemsByDataset');
+    if (!datasets || datasets.length === 0) {
+      container.innerHTML = '<p class="empty">Chưa có dataset nào. Data item nằm trong dataset.</p>';
+      document.getElementById('dataItemsMeta').textContent = 'Không có dataset.';
+      return;
+    }
+    var totalItems = 0;
+    var html = '';
+    datasets.forEach(function(ds) {
+      var items = itemsByDataset[ds.id] || [];
+      totalItems += items.length;
+      html += '<div class="dataset-block">';
+      html += '<h3>' + escapeHtml(ds.name || 'Dataset') + ' <span class="id-short">(' + (ds.id || '').toString().substring(0, 8) + '...)</span> — ' + items.length + ' data item</h3>';
+      if (items.length === 0) {
+        html += '<p class="empty">Chưa có data item trong dataset này.</p>';
+      } else {
+        html += '<table><thead><tr><th>STT</th><th>ID</th><th>Nội dung / URL</th><th>Trạng thái</th></tr></thead><tbody>';
+        items.forEach(function(it, idx) {
+          var url = it.contentUrl || '';
+          var fullUrl = resolveContentUrl(url);
+          var contentCell = '';
+          if (isImageUrl(url) || (fullUrl && fullUrl.indexOf('/api/uploads/') !== -1)) {
+            contentCell = '<img class="thumb" src="' + escapeHtml(fullUrl) + '" alt="" onerror="this.style.display=\'none\'"> <span class="content-preview">' + escapeHtml(url || '—') + '</span>';
+          } else if (url) {
+            contentCell = '<a class="link" href="' + escapeHtml(fullUrl) + '" target="_blank" rel="noopener">' + escapeHtml(url.length > 50 ? url.substring(0, 50) + '...' : url) + '</a>';
+          } else {
+            contentCell = '<span class="empty">—</span>';
+          }
+          html += '<tr><td>' + (idx + 1) + '</td><td class="id-short">' + escapeHtml((it.id || '').toString().substring(0, 8)) + '...</td><td>' + contentCell + '</td><td>' + escapeHtml(it.status || '') + '</td></tr>';
+        });
+        html += '</tbody></table>';
+      }
+      html += '</div>';
+    });
+    document.getElementById('dataItemsMeta').textContent = 'Tổng: ' + totalItems + ' data item trong ' + datasets.length + ' dataset.';
+    container.innerHTML = html;
+  }
+
+  function fillDatasetsTable(datasets, itemsCountByDataset) {
+    var tbody = document.getElementById('datasetsBody');
+    if (!datasets || datasets.length === 0) return;
+    tbody.innerHTML = datasets.map(function(ds, i) {
+      var count = itemsCountByDataset[ds.id] != null ? itemsCountByDataset[ds.id] : '—';
+      return '<tr><td>' + (i + 1) + '</td><td class="id-short">' + escapeHtml((ds.id || '').toString().substring(0, 8)) + '...</td><td>' + escapeHtml(ds.name || '') + '</td><td>' + escapeHtml(ds.description || '') + '</td><td>' + count + '</td></tr>';
+    }).join('');
+  }
+
+  loadProject().catch(function(err) {
+    document.getElementById('projectName').textContent = 'Lỗi';
+    document.getElementById('projectDesc').textContent = err.message || 'Không tải được dự án.';
+  });
+
+  loadLabels();
+
+  loadDatasets().then(function(datasets) {
+    if (datasets.length === 0) {
+      document.getElementById('dataItemsByDataset').innerHTML = '<p class="empty">Chưa có dataset nào.</p>';
+      document.getElementById('dataItemsMeta').textContent = 'Không có dataset.';
+      return;
+    }
+    var promises = datasets.map(function(ds) {
+      return loadDataItemsForDataset(ds.id).then(function(items) {
+        return { id: ds.id, items: items };
+      });
+    });
+    return Promise.all(promises).then(function(results) {
+      var itemsByDataset = {};
+      var itemsCountByDataset = {};
+      results.forEach(function(r) {
+        itemsByDataset[r.id] = r.items;
+        itemsCountByDataset[r.id] = r.items.length;
+      });
+      fillDatasetsTable(datasets, itemsCountByDataset);
+      renderDataItemsByDataset(datasets, itemsByDataset);
+    });
+  });
+})();
+</script>
+</body>
+</html>
