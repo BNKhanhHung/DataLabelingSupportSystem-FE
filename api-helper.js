@@ -64,11 +64,27 @@
         });
     }
 
+    /**
+     * Escape HTML special characters to prevent XSS attacks
+     */
+    function escapeHtml(text) {
+        if (typeof text !== 'string') return '';
+        var map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        };
+        return text.replace(/[&<>"']/g, function(c) { return map[c]; });
+    }
+
     window.API = {
         getBaseUrl: getBaseUrl,
         getToken: getToken,
         fetchWithAuth: fetchWithAuth,
         requireAuth: requireAuth,
-        getJson: getJson
+        getJson: getJson,
+        escapeHtml: escapeHtml
     };
 })();

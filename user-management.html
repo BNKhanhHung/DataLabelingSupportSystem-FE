@@ -162,20 +162,30 @@ button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; f
         if (r === 'ADMIN') roleClass = 'role-ADMIN';
         if (r === 'MANAGER') roleClass = 'role-MANAGER';
         var st = (u.status || 'ACTIVE').toUpperCase();
-        return '<tr><td>' + (u.username || '') + '</td><td>' + (u.email || '') + '</td><td><span class="status-' + st + '">' + st + '</span></td><td><span class="role-badge ' + roleClass + '">' + r + '</span></td><td><button type="button" class="btn-small btn-secondary" data-id="' + u.id + '" data-username="' + (u.username || '') + '" data-email="' + (u.email || '') + '" data-status="' + (u.status || 'ACTIVE') + '" data-role="' + r + '">Sửa</button><button type="button" class="btn-small btn-danger" data-id="' + u.id + '">Xóa</button></td></tr>';
+        var username = API.escapeHtml(u.username || '');
+        var email = API.escapeHtml(u.email || '');
+        var role = API.escapeHtml(r);
+        var userId = API.escapeHtml(String(u.id || ''));
+        return '<tr><td>' + username + '</td><td>' + email + '</td><td><span class="status-' + st + '">' + API.escapeHtml(st) + '</span></td><td><span class="role-badge ' + roleClass + '">' + role + '</span></td><td><button type="button" class="btn-small btn-secondary edit-btn" data-user="' + API.escapeHtml(JSON.stringify({id: u.id, username: u.username, email: u.email, status: u.status, systemRole: r})) + '">Sửa</button><button type="button" class="btn-small btn-danger delete-btn" data-id="' + userId + '">Xóa</button></td></tr>';
       }).join('');
-      tbody.querySelectorAll('button[data-id].btn-secondary').forEach(function(btn) {
+      tbody.querySelectorAll('button.edit-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
-          openEdit(btn.dataset.id, btn.dataset.username, btn.dataset.email, btn.dataset.status, btn.dataset.role);
+          try {
+            var user = JSON.parse(btn.dataset.user);
+            openEdit(user.id, user.username, user.email, user.status, user.systemRole);
+          } catch(e) {
+            console.error('Error parsing user data:', e);
+          }
         });
       });
-      tbody.querySelectorAll('button[data-id].btn-danger').forEach(function(btn) {
+      tbody.querySelectorAll('button.delete-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
           if (confirm('Bạn có chắc muốn xóa người dùng này?')) deleteUser(btn.dataset.id);
         });
       });
     }).catch(function(err) {
-      document.getElementById('userTableBody').innerHTML = '<tr><td colspan="5">Lỗi: ' + (err.message || '') + '</td></tr>';
+      var errMsg = API.escapeHtml(err.message || 'Unknown error');
+      document.getElementById('userTableBody').innerHTML = '<tr><td colspan="5">Lỗi: ' + errMsg + '</td></tr>';
     });
   }
 

@@ -5,25 +5,100 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Task của tôi - Data Labeling</title>
 <style>
-body{font-family:sans-serif;background:#0f172a;color:white;padding:40px}
-.card{background:#1e293b;padding:20px;border-radius:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}
-button,a.btn{padding:8px 16px;background:#3b82f6;border:none;color:white;border-radius:6px;cursor:pointer;text-decoration:none;font-size:14px}
-a.back{background:#475569}
-#list{max-width:700px}
-#msg{margin-bottom:16px;color:#94a3b8}
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+body {
+  min-height: 100vh;
+  background: linear-gradient(160deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  color: #f1f5f9;
+  padding: 24px;
+}
+.page { max-width: 920px; margin: 0 auto; }
+.nav-top {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 28px; padding-bottom: 16px; border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+}
+.nav-top a {
+  padding: 10px 16px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 500;
+  background: rgba(30, 41, 59, 0.9); color: #e2e8f0; border: 1px solid #334155;
+  transition: background 0.2s, border-color 0.2s;
+}
+.nav-top a:hover { background: #334155; border-color: #475569; }
+.nav-top a.back { background: rgba(34, 197, 94, 0.15); color: #4ade80; border-color: rgba(34, 197, 94, 0.4); }
+.nav-top a.back:hover { background: rgba(34, 197, 94, 0.25); }
+#logoutLink { background: rgba(220, 38, 38, 0.2) !important; color: #f87171 !important; border-color: rgba(220, 38, 38, 0.4) !important; }
+#logoutLink:hover { background: rgba(220, 38, 38, 0.3) !important; }
+.header-row {
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+  margin-bottom: 20px;
+}
+.header-row h1 { font-size: 22px; font-weight: 600; color: #f8fafc; }
+.btn-refresh {
+  padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer;
+  background: #334155; color: #e2e8f0; border: 1px solid #475569;
+  transition: background 0.2s;
+}
+.btn-refresh:hover { background: #475569; }
+#msg { margin-bottom: 16px; font-size: 14px; color: #94a3b8; }
+.task-card, .card {
+  background: rgba(30, 41, 59, 0.95);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  border: 1px solid #334155;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.task-card:hover, .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  border-color: #475569;
+}
+.task-info p { margin: 4px 0; color: #94a3b8; font-size: 14px; }
+.task-title { font-size: 16px; font-weight: 600; color: #f8fafc; }
+.task-status {
+  font-size: 12px; padding: 4px 10px; border-radius: 8px;
+  background: #334155; color: #cbd5e1; margin-top: 6px; display: inline-block;
+}
+.btn-start {
+  padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 500;
+  background: linear-gradient(135deg, #22c55e, #16a34a); color: white;
+  text-decoration: none; border: none; cursor: pointer; white-space: nowrap;
+  transition: opacity 0.2s, transform 0.1s;
+}
+.btn-start:hover { opacity: 0.95; transform: scale(1.02); }
+.card a.btn { padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 500; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; text-decoration: none; transition: opacity 0.2s, transform 0.1s; }
+.card a.btn:hover { opacity: 0.95; transform: scale(1.02); }
+.empty-state {
+  background: rgba(30, 41, 59, 0.8);
+  padding: 48px 24px;
+  border-radius: 14px;
+  text-align: center;
+  color: #94a3b8;
+  border: 1px dashed #475569;
+}
+.empty-state p { font-size: 15px; margin-bottom: 8px; }
+#list.empty-list .empty-state { display: block; }
 </style>
 </head>
 <body>
-
-<nav style="margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-  <a href="user-dashboard.html" class="btn back">← Dashboard</a>
-  <a href="my-profile.html" class="btn" style="background:#475569">Thông tin của tôi</a>
-  <a href="change-password.html" class="btn" style="background:#475569">Đổi mật khẩu</a>
-  <a href="#" id="logoutLink" class="btn" style="background:#991b1b">Đăng xuất</a>
-</nav>
-<h2>Task được giao <button type="button" id="btnRefresh" class="btn" style="background:#475569;margin-left:12px">Làm mới</button></h2>
-<p id="msg">Đang tải...</p>
-<div id="list"></div>
+<div class="page">
+  <nav class="nav-top">
+    <a href="user-dashboard.html" class="back">← Dashboard</a>
+    <a href="my-profile.html">Thông tin của tôi</a>
+    <a href="change-password.html">Đổi mật khẩu</a>
+    <a href="#" id="logoutLink">Đăng xuất</a>
+  </nav>
+  <div class="header-row">
+    <h1>Task được giao</h1>
+    <button type="button" id="btnRefresh" class="btn-refresh">🔄 Làm mới</button>
+  </div>
+  <p id="msg">Đang tải...</p>
+  <div id="list"></div>
+</div>
 
 <script src="api-config.js"></script>
 <script src="api-helper.js"></script>
@@ -63,7 +138,7 @@ a.back{background:#475569}
       var reviewerList = (reviewerData.content || []).map(function(t) { t._type = 'reviewer'; return t; });
       var list = annotatorList.concat(reviewerList);
       msgEl.textContent = list.length === 0 ? 'Bạn chưa có task nào.' : 'Tổng: ' + list.length + ' task (gán nhãn + review).';
-      var html = list.length === 0 ? '<p>Chưa có task được giao.</p>' : list.map(function(t) {
+      var html = list.length === 0 ? '<div class="empty-state"><p>Chưa có task được giao.</p><p style="font-size:13px;margin-top:8px;">Khi manager giao task, danh sách sẽ hiển thị tại đây.</p></div>' : list.map(function(t) {
         var status = t.status || 'OPEN';
         var tid = '';
         if (t != null) {

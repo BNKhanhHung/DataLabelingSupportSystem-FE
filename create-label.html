@@ -5,40 +5,105 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tạo Label - Data Labeling</title>
 <style>
-body{font-family:sans-serif;background:#0f172a;color:white;padding:40px}
-input,textarea,select{width:100%;padding:10px;margin:10px 0;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;box-sizing:border-box}
-button{padding:10px 20px;background:#22c55e;border:none;color:white;border-radius:6px;cursor:pointer}
-button:disabled{opacity:0.6;cursor:not-allowed}
-.card{background:#1e293b;padding:30px;border-radius:12px;max-width:600px}
-a{color:#38bdf8}
-#msg{margin-top:12px;font-size:14px}
-label{display:block;margin-top:8px;color:#94a3b8;font-size:14px}
-.color-preview{width:24px;height:24px;border-radius:6px;display:inline-block;vertical-align:middle;margin-left:8px;border:1px solid #334155}
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+body {
+  min-height: 100vh;
+  background: linear-gradient(160deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  color: #f1f5f9;
+  padding: 24px;
+}
+.page { max-width: 640px; margin: 0 auto; }
+.nav-top { margin-bottom: 28px; }
+.nav-top a {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: 10px; text-decoration: none; font-size: 14px;
+  background: rgba(30, 41, 59, 0.9); color: #94a3b8; border: 1px solid #334155;
+  transition: background 0.2s, color 0.2s;
+}
+.nav-top a:hover { background: #334155; color: #e2e8f0; }
+.card {
+  background: rgba(30, 41, 59, 0.95);
+  border-radius: 14px;
+  padding: 32px;
+  border: 1px solid #334155;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+}
+.card h1 { font-size: 22px; font-weight: 600; color: #f8fafc; margin-bottom: 8px; }
+.card .sub { color: #94a3b8; font-size: 14px; margin-bottom: 24px; }
+.form-group { margin-bottom: 20px; }
+.form-group label {
+  display: block; font-size: 14px; font-weight: 500; color: #e2e8f0; margin-bottom: 8px;
+}
+.form-group input, .form-group textarea, .form-group select {
+  width: 100%; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid #334155; background: #0f172a; color: #e2e8f0;
+  font-size: 14px; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+  outline: none; border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+}
+.form-group textarea { min-height: 70px; resize: vertical; }
+.color-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.color-row input { flex: 1; min-width: 120px; }
+.color-preview {
+  width: 36px; height: 36px; border-radius: 10px; border: 2px solid #334155;
+  flex-shrink: 0; background: #22c55e;
+}
+.form-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 28px; }
+.btn-primary {
+  padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer;
+  background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none;
+  transition: opacity 0.2s, transform 0.1s;
+}
+.btn-primary:hover { opacity: 0.95; transform: scale(1.02); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.btn-back {
+  padding: 12px 20px; border-radius: 10px; font-size: 14px; text-decoration: none;
+  background: #334155; color: #e2e8f0; border: 1px solid #475569;
+  transition: background 0.2s;
+}
+.btn-back:hover { background: #475569; }
+#msg { margin-top: 16px; font-size: 14px; }
 </style>
 </head>
 <body>
-
-<div class="card">
-<h2>Tạo Label mới</h2>
-<p style="color:#94a3b8;margin-bottom:16px;">Label thuộc một dự án, dùng cho annotator gắn nhãn cho dữ liệu.</p>
-<form id="form">
-  <label>Dự án *</label>
-  <select id="projectId" required>
-    <option value="">-- Chọn dự án --</option>
-  </select>
-  <label>Tên Label *</label>
-  <input type="text" id="name" placeholder="Ví dụ: Positive, Negative, Neutral" required>
-  <label>Mô tả</label>
-  <textarea id="description" rows="2" placeholder="Mô tả label (tùy chọn)"></textarea>
-  <label>Màu (hex, ví dụ #22c55e)</label>
-  <input type="text" id="color" placeholder="#22c55e" maxlength="20">
-  <span class="color-preview" id="colorPreview" style="background:#22c55e;"></span>
-  <button type="submit" id="btn">Tạo Label</button>
-  <a href="manager.html" style="display:inline-block;margin-top:12px;">← Quay lại Manager</a>
-</form>
-<p id="msg"></p>
+<div class="page">
+  <nav class="nav-top">
+    <a href="manager.html">← Quay lại Manager</a>
+  </nav>
+  <div class="card">
+    <h1>Tạo Label mới</h1>
+    <p class="sub">Label thuộc một dự án, dùng cho annotator gắn nhãn cho dữ liệu.</p>
+    <form id="form">
+      <div class="form-group">
+        <label for="projectId">Dự án *</label>
+        <select id="projectId" required>
+          <option value="">-- Chọn dự án --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="name">Tên Label *</label>
+        <input type="text" id="name" placeholder="Ví dụ: Positive, Negative, Neutral" required>
+      </div>
+      <div class="form-group">
+        <label for="description">Mô tả</label>
+        <textarea id="description" placeholder="Mô tả label (tùy chọn)"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="color">Màu (hex)</label>
+        <div class="color-row">
+          <input type="text" id="color" placeholder="#22c55e" maxlength="20">
+          <span class="color-preview" id="colorPreview"></span>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" id="btn" class="btn-primary">Tạo Label</button>
+        <a href="manager.html" class="btn-back">Hủy / Quay lại</a>
+      </div>
+    </form>
+    <p id="msg"></p>
+  </div>
 </div>
-
 <script src="api-config.js"></script>
 <script src="api-helper.js"></script>
 <script>
@@ -51,26 +116,23 @@ label{display:block;margin-top:8px;color:#94a3b8;font-size:14px}
     window.location.href = 'user-dashboard.html';
     return;
   }
-
   var projectSelect = document.getElementById('projectId');
   var colorInput = document.getElementById('color');
   var colorPreview = document.getElementById('colorPreview');
   var form = document.getElementById('form');
   var btn = document.getElementById('btn');
   var msg = document.getElementById('msg');
-
+  colorPreview.style.background = '#22c55e';
   colorInput.addEventListener('input', function() {
     var v = (this.value || '').trim();
     colorPreview.style.background = v && /^#[0-9A-Fa-f]{3,6}$/.test(v) ? v : '#22c55e';
   });
-
   API.fetchWithAuth(cfg.projects + '?page=0&size=100').then(function(r) { return r.json(); }).then(function(data) {
     var list = data.content || [];
     projectSelect.innerHTML = '<option value="">-- Chọn dự án --</option>' + list.map(function(p) {
       return '<option value="' + p.id + '">' + (p.name || p.id) + '</option>';
     }).join('');
   }).catch(function() { projectSelect.innerHTML = '<option value="">Lỗi tải dự án</option>'; });
-
   form.addEventListener('submit', function(e) {
     e.preventDefault();
     var projectId = projectSelect.value;

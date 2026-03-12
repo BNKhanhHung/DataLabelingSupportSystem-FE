@@ -5,67 +5,138 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tạo Data Item - Data Labeling</title>
 <style>
-body{font-family:sans-serif;background:#0f172a;color:white;padding:40px}
-input,textarea,select{width:100%;padding:10px;margin:10px 0;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;box-sizing:border-box}
-button{padding:10px 20px;background:#22c55e;border:none;color:white;border-radius:6px;cursor:pointer;margin-right:8px}
-button:disabled{opacity:0.6;cursor:not-allowed}
-button.secondary{background:#475569}
-.card{background:#1e293b;padding:30px;border-radius:12px;max-width:600px;margin-bottom:20px}
-a{color:#38bdf8}
-#msg{margin-top:12px;font-size:14px}
-label{display:block;margin-top:8px;color:#94a3b8;font-size:14px}
-.tabs{margin-bottom:16px}
-.tabs button{padding:8px 16px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#94a3b8;cursor:pointer}
-.tabs button.active{background:#0ea5e9;color:white;border-color:#0ea5e9}
-.panel{display:none}
-.panel.active{display:block}
-input[type=file]{padding:8px}
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+body {
+  min-height: 100vh;
+  background: linear-gradient(160deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  color: #f1f5f9;
+  padding: 24px;
+}
+.page { max-width: 640px; margin: 0 auto; }
+.nav-top { margin-bottom: 28px; }
+.nav-top a {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: 10px; text-decoration: none; font-size: 14px;
+  background: rgba(30, 41, 59, 0.9); color: #94a3b8; border: 1px solid #334155;
+  transition: background 0.2s, color 0.2s;
+}
+.nav-top a:hover { background: #334155; color: #e2e8f0; }
+.card {
+  background: rgba(30, 41, 59, 0.95);
+  border-radius: 14px;
+  padding: 32px;
+  border: 1px solid #334155;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+}
+.card h1 { font-size: 22px; font-weight: 600; color: #f8fafc; margin-bottom: 8px; }
+.card .sub { color: #94a3b8; font-size: 14px; margin-bottom: 24px; }
+.form-group { margin-bottom: 20px; }
+.form-group label {
+  display: block; font-size: 14px; font-weight: 500; color: #e2e8f0; margin-bottom: 8px;
+}
+.form-group input, .form-group textarea, .form-group select {
+  width: 100%; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid #334155; background: #0f172a; color: #e2e8f0;
+  font-size: 14px; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+  outline: none; border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+}
+.form-group textarea { min-height: 70px; resize: vertical; }
+.form-group input[type=file] { padding: 10px; }
+.tabs {
+  display: flex; gap: 8px; margin-bottom: 24px;
+  background: #0f172a; padding: 6px; border-radius: 12px; border: 1px solid #334155;
+}
+.tabs button {
+  flex: 1; padding: 12px 16px; border-radius: 8px; border: none;
+  background: transparent; color: #94a3b8; font-size: 14px; font-weight: 500; cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.tabs button:hover { color: #e2e8f0; background: rgba(51, 65, 85, 0.5); }
+.tabs button.active { background: #334155; color: #f8fafc; }
+.panel { display: none; }
+.panel.active { display: block; }
+.form-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 24px; }
+.btn-primary {
+  padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer;
+  background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none;
+  transition: opacity 0.2s, transform 0.1s;
+}
+.btn-primary:hover { opacity: 0.95; transform: scale(1.02); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.btn-back {
+  padding: 12px 20px; border-radius: 10px; font-size: 14px; text-decoration: none;
+  background: #334155; color: #e2e8f0; border: 1px solid #475569;
+  transition: background 0.2s; margin-top: 16px; display: inline-block;
+}
+.btn-back:hover { background: #475569; }
+#msg { margin-top: 16px; font-size: 14px; }
 </style>
 </head>
 <body>
+<div class="page">
+  <nav class="nav-top">
+    <a href="manager.html">← Quay lại Manager</a>
+  </nav>
+  <div class="card">
+    <h1>Thêm Data Item</h1>
+    <p class="sub">Chọn dự án và dataset, sau đó thêm bằng URL hoặc upload file.</p>
 
-<div class="card">
-<h2>Thêm Data Item</h2>
-<p style="color:#94a3b8;margin-bottom:16px;">Chọn dự án và dataset, sau đó thêm bằng URL hoặc upload file.</p>
+    <div class="form-group">
+      <label for="projectId">Dự án *</label>
+      <select id="projectId">
+        <option value="">-- Chọn dự án --</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="datasetId">Dataset (trong dự án) *</label>
+      <select id="datasetId">
+        <option value="">-- Chọn dự án trước --</option>
+      </select>
+    </div>
 
-<div class="tabs">
-  <button type="button" id="tabUrl" class="active">Thêm bằng URL</button>
-  <button type="button" id="tabUpload">Upload file</button>
+    <div class="tabs">
+      <button type="button" id="tabUrl" class="active">Thêm bằng URL</button>
+      <button type="button" id="tabUpload">Upload file</button>
+    </div>
+
+    <div id="panelUrl" class="panel active">
+      <form id="formUrl">
+        <div class="form-group">
+          <label for="contentUrl">Content URL *</label>
+          <input type="url" id="contentUrl" placeholder="https://example.com/image.jpg" maxlength="1000">
+        </div>
+        <div class="form-group">
+          <label for="metadataUrl">Metadata (tùy chọn)</label>
+          <textarea id="metadataUrl" rows="2" placeholder="JSON hoặc text mô tả"></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="submit" id="btnUrl" class="btn-primary">Tạo Data Item (URL)</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="panelUpload" class="panel">
+      <form id="formUpload">
+        <div class="form-group">
+          <label for="fileInput">Chọn file *</label>
+          <input type="file" id="fileInput" accept="*/*">
+        </div>
+        <div class="form-group">
+          <label for="metadataUpload">Metadata (tùy chọn)</label>
+          <input type="text" id="metadataUpload" placeholder="Mô tả hoặc metadata">
+        </div>
+        <div class="form-actions">
+          <button type="submit" id="btnUpload" class="btn-primary">Upload & tạo Data Item</button>
+        </div>
+      </form>
+    </div>
+
+    <p id="msg"></p>
+    <a href="manager.html" class="btn-back">← Quay lại Manager</a>
+  </div>
 </div>
-
-<label>Dự án *</label>
-<select id="projectId">
-  <option value="">-- Chọn dự án --</option>
-</select>
-<label>Dataset (trong dự án) *</label>
-<select id="datasetId">
-  <option value="">-- Chọn dự án trước --</option>
-</select>
-
-<div id="panelUrl" class="panel active">
-  <form id="formUrl">
-    <label>Content URL *</label>
-    <input type="url" id="contentUrl" placeholder="https://example.com/image.jpg" maxlength="1000">
-    <label>Metadata (tùy chọn)</label>
-    <textarea id="metadataUrl" rows="2" placeholder="JSON hoặc text mô tả"></textarea>
-    <button type="submit" id="btnUrl">Tạo Data Item (URL)</button>
-  </form>
-</div>
-
-<div id="panelUpload" class="panel">
-  <form id="formUpload">
-    <label>Chọn file *</label>
-    <input type="file" id="fileInput" accept="*/*">
-    <label>Metadata (tùy chọn)</label>
-    <input type="text" id="metadataUpload" placeholder="Mô tả hoặc metadata">
-    <button type="submit" id="btnUpload">Upload & tạo Data Item</button>
-  </form>
-</div>
-
-<p id="msg"></p>
-<a href="manager.html" style="display:inline-block;margin-top:16px;">← Quay lại Manager</a>
-</div>
-
 <script src="api-config.js"></script>
 <script src="api-helper.js"></script>
 <script>
@@ -78,23 +149,19 @@ input[type=file]{padding:8px}
     window.location.href = 'user-dashboard.html';
     return;
   }
-
   var projectSelect = document.getElementById('projectId');
   var datasetSelect = document.getElementById('datasetId');
   var msg = document.getElementById('msg');
-
   function showMsg(text, isError) {
     msg.textContent = text;
     msg.style.color = isError ? '#f87171' : '#4ade80';
   }
-
   API.fetchWithAuth(cfg.projects + '?page=0&size=100').then(function(r) { return r.json(); }).then(function(data) {
     var list = data.content || [];
     projectSelect.innerHTML = '<option value="">-- Chọn dự án --</option>' + list.map(function(p) {
       return '<option value="' + p.id + '">' + (p.name || p.id) + '</option>';
     }).join('');
   }).catch(function() { projectSelect.innerHTML = '<option value="">Lỗi tải dự án</option>'; });
-
   projectSelect.addEventListener('change', function() {
     var pid = this.value;
     datasetSelect.innerHTML = '<option value="">-- Chọn dataset --</option>';
@@ -108,7 +175,6 @@ input[type=file]{padding:8px}
       }).join('');
     }).catch(function() { datasetSelect.disabled = false; datasetSelect.innerHTML = '<option value="">Lỗi tải dataset</option>'; });
   });
-
   document.getElementById('tabUrl').addEventListener('click', function() {
     document.getElementById('panelUrl').classList.add('active');
     document.getElementById('panelUpload').classList.remove('active');
@@ -121,7 +187,6 @@ input[type=file]{padding:8px}
     this.classList.add('active');
     document.getElementById('tabUrl').classList.remove('active');
   });
-
   document.getElementById('formUrl').addEventListener('submit', function(e) {
     e.preventDefault();
     var datasetId = datasetSelect.value;
@@ -146,7 +211,6 @@ input[type=file]{padding:8px}
       showMsg('Lỗi: ' + (err.message || 'Tạo thất bại'), true);
     }).finally(function() { btn.disabled = false; });
   });
-
   document.getElementById('formUpload').addEventListener('submit', function(e) {
     e.preventDefault();
     var datasetId = datasetSelect.value;
