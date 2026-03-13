@@ -97,7 +97,8 @@ body {
     </div>
 
     <div class="tabs">
-      <button type="button" id="tabUrl" class="active">Thêm bằng URL</button>
+      <button type="button" id="tabUrl" class="active">Một URL</button>
+      <button type="button" id="tabBulk">Nhiều URL</button>
       <button type="button" id="tabUpload">Upload file</button>
     </div>
 
@@ -112,7 +113,20 @@ body {
           <textarea id="metadataUrl" rows="2" placeholder="JSON hoặc text mô tả"></textarea>
         </div>
         <div class="form-actions">
-          <button type="submit" id="btnUrl" class="btn-primary">Tạo Data Item (URL)</button>
+          <button type="submit" id="btnUrl" class="btn-primary">Tạo 1 Data Item</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="panelBulk" class="panel">
+      <form id="formBulk">
+        <div class="form-group">
+          <label for="contentUrlsBulk">Nhiều Content URL * (mỗi dòng một URL)</label>
+          <textarea id="contentUrlsBulk" rows="8" placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg&#10;https://example.com/image3.jpg"></textarea>
+          <small style="color:#94a3b8;font-size:12px;display:block;margin-top:6px;">URL trùng trong dataset sẽ được bỏ qua. Dòng trống sẽ bỏ qua.</small>
+        </div>
+        <div class="form-actions">
+          <button type="submit" id="btnBulk" class="btn-primary">Tạo nhiều Data Item</button>
         </div>
       </form>
     </div>
@@ -120,15 +134,16 @@ body {
     <div id="panelUpload" class="panel">
       <form id="formUpload">
         <div class="form-group">
-          <label for="fileInput">Chọn file *</label>
-          <input type="file" id="fileInput" accept="*/*">
+          <label for="fileInput">Chọn một hoặc nhiều hình ảnh *</label>
+          <input type="file" id="fileInput" accept="image/*" multiple>
+          <small style="color:#94a3b8;font-size:12px;display:block;margin-top:6px;">Có thể chọn nhiều file cùng lúc (Ctrl/Cmd + click). Mỗi ảnh sẽ tạo một data item.</small>
         </div>
         <div class="form-group">
-          <label for="metadataUpload">Metadata (tùy chọn)</label>
+          <label for="metadataUpload">Metadata (tùy chọn, dùng chung cho tất cả ảnh)</label>
           <input type="text" id="metadataUpload" placeholder="Mô tả hoặc metadata">
         </div>
         <div class="form-actions">
-          <button type="submit" id="btnUpload" class="btn-primary">Upload & tạo Data Item</button>
+          <button type="submit" id="btnUpload" class="btn-primary">Tải lên & tạo Data Item</button>
         </div>
       </form>
     </div>
@@ -175,18 +190,17 @@ body {
       }).join('');
     }).catch(function() { datasetSelect.disabled = false; datasetSelect.innerHTML = '<option value="">Lỗi tải dataset</option>'; });
   });
-  document.getElementById('tabUrl').addEventListener('click', function() {
-    document.getElementById('panelUrl').classList.add('active');
-    document.getElementById('panelUpload').classList.remove('active');
-    this.classList.add('active');
-    document.getElementById('tabUpload').classList.remove('active');
-  });
-  document.getElementById('tabUpload').addEventListener('click', function() {
-    document.getElementById('panelUpload').classList.add('active');
-    document.getElementById('panelUrl').classList.remove('active');
-    this.classList.add('active');
-    document.getElementById('tabUrl').classList.remove('active');
-  });
+  function setActiveTab(activeTabId) {
+    ['tabUrl', 'tabBulk', 'tabUpload'].forEach(function(id) {
+      document.getElementById(id).classList.toggle('active', id === activeTabId);
+    });
+    ['panelUrl', 'panelBulk', 'panelUpload'].forEach(function(id) {
+      document.getElementById(id).classList.toggle('active', id === 'panel' + activeTabId.replace('tab', ''));
+    });
+  }
+  document.getElementById('tabUrl').addEventListener('click', function() { setActiveTab('tabUrl'); });
+  document.getElementById('tabBulk').addEventListener('click', function() { setActiveTab('tabBulk'); });
+  document.getElementById('tabUpload').addEventListener('click', function() { setActiveTab('tabUpload'); });
   document.getElementById('formUrl').addEventListener('submit', function(e) {
     e.preventDefault();
     var datasetId = datasetSelect.value;
@@ -211,45 +225,95 @@ body {
       showMsg('Lỗi: ' + (err.message || 'Tạo thất bại'), true);
     }).finally(function() { btn.disabled = false; });
   });
+
+  document.getElementById('formBulk').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var datasetId = datasetSelect.value;
+    var raw = document.getElementById('contentUrlsBulk').value || '';
+    var contentUrls = raw.split(/\r?\n/).map(function(s) { return s.trim(); }).filter(Boolean);
+    if (!datasetId) { showMsg('Vui lòng chọn dự án và dataset.', true); return; }
+    if (contentUrls.length === 0) { showMsg('Vui lòng nhập ít nhất một URL (mỗi dòng một URL).', true); return; }
+    var btn = document.getElementById('btnBulk');
+    btn.disabled = true;
+    showMsg('Đang tạo ' + contentUrls.length + ' data item...', false);
+    API.fetchWithAuth(cfg.dataItems + '/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ datasetId: datasetId, contentUrls: contentUrls })
+    }).then(function(r) {
+      if (!r.ok) return r.json().then(function(d) { throw new Error(d.message || d.error || 'Tạo thất bại'); });
+      return r.json();
+    }).then(function(created) {
+      var count = Array.isArray(created) ? created.length : 0;
+      var skipped = contentUrls.length - count;
+      if (count === 0) {
+        showMsg('Không tạo được data item mới. Có thể tất cả URL đã tồn tại trong dataset.', true);
+      } else {
+        showMsg('Đã tạo ' + count + ' data item.' + (skipped > 0 ? ' (Bỏ qua ' + skipped + ' URL trùng.)' : ''));
+        document.getElementById('contentUrlsBulk').value = '';
+      }
+    }).catch(function(err) {
+      showMsg('Lỗi: ' + (err.message || 'Tạo thất bại'), true);
+    }).finally(function() { btn.disabled = false; });
+  });
   document.getElementById('formUpload').addEventListener('submit', function(e) {
     e.preventDefault();
     var datasetId = datasetSelect.value;
     var fileInput = document.getElementById('fileInput');
     if (!datasetId) { showMsg('Vui lòng chọn dự án và dataset.', true); return; }
-    if (!fileInput.files || !fileInput.files[0]) { showMsg('Vui lòng chọn file.', true); return; }
-    var formData = new FormData();
-    formData.append('datasetId', datasetId);
-    formData.append('file', fileInput.files[0]);
+    if (!fileInput.files || fileInput.files.length === 0) { showMsg('Vui lòng chọn ít nhất một hình ảnh.', true); return; }
+    var files = Array.from(fileInput.files);
     var meta = document.getElementById('metadataUpload').value.trim();
-    if (meta) formData.append('metadata', meta);
     var btn = document.getElementById('btnUpload');
     btn.disabled = true;
-    showMsg('Đang upload...', false);
     var url = API.getBaseUrl() + '/api/data-items/upload';
     var token = API.getToken();
-    fetch(url, {
-      method: 'POST',
-      headers: token ? { 'Authorization': 'Bearer ' + token } : {},
-      body: formData
-    }).then(function(res) {
-      if (res.status === 401) {
-        localStorage.removeItem('token');
-        window.location.href = 'login.html';
-        throw new Error('Unauthorized');
+    var total = files.length;
+    var done = 0;
+    var failed = 0;
+    var lastError = '';
+    function doUpload(index) {
+      if (index >= files.length) {
+        if (done > 0) {
+          showMsg('Đã tải lên ' + done + ' hình ảnh.' + (failed > 0 ? ' Thất bại: ' + failed + '.' + (lastError ? ' ' + lastError : '') : ''));
+          fileInput.value = '';
+          document.getElementById('metadataUpload').value = '';
+        }
+        if (failed === total) showMsg('Tất cả upload đều thất bại.' + (lastError ? ' ' + lastError : ''), true);
+        btn.disabled = false;
+        return;
       }
-      if (!res.ok) return res.json().then(function(d) {
-        var msg = d.message || d.error || ('Upload thất bại (HTTP ' + res.status + ')');
-        if (msg === 'Upload failed: null' || (msg && msg.indexOf('null') !== -1 && msg.length < 30)) msg = 'Upload thất bại. Kiểm tra backend đã cấu hình Supabase (url, service-key, bucket) chưa.';
-        throw new Error(msg);
+      showMsg('Đang tải ' + (index + 1) + '/' + total + '...', false);
+      var formData = new FormData();
+      formData.append('datasetId', datasetId);
+      formData.append('file', files[index]);
+      if (meta) formData.append('metadata', meta);
+      fetch(url, {
+        method: 'POST',
+        headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+        body: formData
+      }).then(function(res) {
+        if (res.status === 401) {
+          localStorage.removeItem('token');
+          window.location.href = 'login.html';
+          throw new Error('Unauthorized');
+        }
+        if (!res.ok) return res.json().then(function(d) {
+          var m = d.message || d.error || ('HTTP ' + res.status);
+          if (m === 'Upload failed: null' || (m && m.indexOf('null') !== -1 && m.length < 30)) m = 'Upload thất bại. Kiểm tra cấu hình Supabase.';
+          throw new Error(m);
+        });
+        return res.json();
+      }).then(function() {
+        done++;
+        doUpload(index + 1);
+      }).catch(function(err) {
+        failed++;
+        lastError = err.message || '';
+        doUpload(index + 1);
       });
-      return res.json();
-    }).then(function() {
-      showMsg('Upload và tạo data item thành công.');
-      fileInput.value = '';
-      document.getElementById('metadataUpload').value = '';
-    }).catch(function(err) {
-      showMsg('Lỗi: ' + (err.message || 'Upload thất bại'), true);
-    }).finally(function() { btn.disabled = false; });
+    }
+    doUpload(0);
   });
 })();
 </script>
