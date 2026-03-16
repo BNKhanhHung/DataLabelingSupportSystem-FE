@@ -107,7 +107,7 @@ body {
   var form = document.getElementById('form');
   var btn = document.getElementById('btn');
   var msg = document.getElementById('msg');
-  API.fetchWithAuth(cfg.projects + '?page=0&size=100').then(function(r) { return r.json(); }).then(function(data) {
+  API.fetchWithAuth(cfg.projects + '?page=0&size=100').then(function(r) { return API.safeJson(r); }).then(function(data) {
     var list = data.content || [];
     projectSelect.innerHTML = '<option value="">-- Chọn dự án --</option>' + list.map(function(p) {
       return '<option value="' + p.id + '">' + (p.name || p.id) + '</option>';
@@ -129,7 +129,7 @@ body {
         name: name,
         description: document.getElementById('description').value.trim() || null
       })
-    }).then(function(r) { return r.json(); }).then(function() {
+    }).then(function(r) { return API.safeJson(r); }).then(function() {
       msg.textContent = 'Tạo dataset thành công.';
       msg.style.color = '#4ade80';
       document.getElementById('name').value = '';

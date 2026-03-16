@@ -35,7 +35,7 @@ a{color:#38bdf8}
 
   function doExport(format) {
     msg.textContent = 'Đang tải dữ liệu...';
-    API.fetchWithAuth(cfg.dataItems + '?page=0&size=500').then(function(r) { return r.json(); }).then(function(data) {
+    API.fetchWithAuth(cfg.dataItems + '?page=0&size=500').then(function(r) { return API.safeJson(r); }).then(function(data) {
       var list = data.content || [];
       if (list.length === 0) {
         msg.textContent = 'Không có data item nào.';

@@ -298,7 +298,7 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
         try { var d = JSON.parse(t); if (d && d.message) err.message = d.message; } catch (e) {}
         throw err;
       });
-      return r.json();
+      return API.safeJson(r);
     }).then(function() {
       if (msgEl) {
         msgEl.textContent = 'Đã hoàn tất. Đang chuyển về Dashboard...';

@@ -131,19 +131,19 @@ a.link-btn:hover { text-decoration: underline; }
       document.getElementById('reviewerTasksBody').innerHTML = '<tr><td colspan="3" class="empty">Vui lòng đăng nhập.</td></tr>';
       return;
     }
-    API.fetchWithAuth(cfg.tasks + '/annotator/' + uid + '?page=0&size=20').then(function(r) { return r.json(); }).then(function(data) {
+    API.fetchWithAuth(cfg.tasks + '/annotator/' + uid + '?page=0&size=20').then(function(r) { return API.safeJson(r); }).then(function(data) {
       renderTaskRows(data.content || [], 'annotatorTasksBody', 'Gắn nhãn', 'annotator-label.html');
     }).catch(function() {
       document.getElementById('annotatorTasksBody').innerHTML = '<tr><td colspan="3" class="empty">Không tải được.</td></tr>';
     });
-    API.fetchWithAuth(cfg.tasks + '/reviewer/' + uid + '?page=0&size=20').then(function(r) { return r.json(); }).then(function(data) {
+    API.fetchWithAuth(cfg.tasks + '/reviewer/' + uid + '?page=0&size=20').then(function(r) { return API.safeJson(r); }).then(function(data) {
       renderTaskRows(data.content || [], 'reviewerTasksBody', 'Review', 'reviewer-task-review.html');
     }).catch(function() {
       document.getElementById('reviewerTasksBody').innerHTML = '<tr><td colspan="3" class="empty">Không tải được.</td></tr>';
     });
   }
 
-  API.fetchWithAuth(cfg.users + '/me').then(function(r) { return r.json(); }).then(function(me) {
+  API.fetchWithAuth(cfg.users + '/me').then(function(r) { return API.safeJson(r); }).then(function(me) {
     document.getElementById('pUsername').textContent = me.username || '--';
     document.getElementById('pEmail').textContent = me.email || '--';
     document.getElementById('pRole').textContent = (me.systemRole || 'USER');

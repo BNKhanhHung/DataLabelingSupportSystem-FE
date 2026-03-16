@@ -35,7 +35,7 @@ a{color:#38bdf8}
   var userId = localStorage.getItem('userId');
   if (!userId) { document.getElementById('msg').textContent = 'Chưa đăng nhập.'; return; }
 
-  API.fetchWithAuth(cfg.reviewFeedbacks + '/reviewer/' + userId + '?page=0&size=50').then(function(r) { return r.json(); }).then(function(data) {
+  API.fetchWithAuth(cfg.reviewFeedbacks + '/reviewer/' + userId + '?page=0&size=50').then(function(r) { return API.safeJson(r); }).then(function(data) {
     var list = data.content || [];
     document.getElementById('msg').textContent = list.length === 0 ? 'Bạn chưa có review nào.' : 'Tổng: ' + list.length + ' feedback.';
     if (list.length === 0) {

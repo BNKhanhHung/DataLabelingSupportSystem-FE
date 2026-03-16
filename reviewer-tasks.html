@@ -46,7 +46,7 @@ h2 { margin-bottom: 12px; font-size: 20px; }
   function ensureUserId(done) {
     var uid = localStorage.getItem('userId');
     if (uid) { done(uid); return; }
-    API.fetchWithAuth(cfg.users + '/me').then(function(r) { return r.json(); }).then(function(me) {
+    API.fetchWithAuth(cfg.users + '/me').then(function(r) { return API.safeJson(r); }).then(function(me) {
       if (me.id != null) {
         localStorage.setItem('userId', String(me.id));
         done(String(me.id));
@@ -62,7 +62,7 @@ h2 { margin-bottom: 12px; font-size: 20px; }
     }
     msgEl.textContent = 'Đang tải...';
     msgEl.style.color = '#94a3b8';
-    API.fetchWithAuth(cfg.tasks + '/reviewer/' + uid + '?page=0&size=50').then(function(r) { return r.json(); }).then(function(data) {
+    API.fetchWithAuth(cfg.tasks + '/reviewer/' + uid + '?page=0&size=50').then(function(r) { return API.safeJson(r); }).then(function(data) {
       var list = data.content || [];
       msgEl.textContent = list.length === 0 ? 'Bạn chưa có task nào cần review.' : 'Tổng: ' + list.length + ' task cần review.';
       if (list.length === 0) {

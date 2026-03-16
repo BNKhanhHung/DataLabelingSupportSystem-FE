@@ -171,7 +171,7 @@ body {
     msg.textContent = text;
     msg.style.color = isError ? '#f87171' : '#4ade80';
   }
-  API.fetchWithAuth(cfg.projects + '?page=0&size=100').then(function(r) { return r.json(); }).then(function(data) {
+  API.fetchWithAuth(cfg.projects + '?page=0&size=100').then(function(r) { return API.safeJson(r); }).then(function(data) {
     var list = data.content || [];
     projectSelect.innerHTML = '<option value="">-- Chọn dự án --</option>' + list.map(function(p) {
       return '<option value="' + p.id + '">' + (p.name || p.id) + '</option>';
@@ -182,7 +182,7 @@ body {
     datasetSelect.innerHTML = '<option value="">-- Chọn dataset --</option>';
     if (!pid) return;
     datasetSelect.disabled = true;
-    API.fetchWithAuth(cfg.datasets + '/project/' + pid + '?page=0&size=50').then(function(r) { return r.json(); }).then(function(data) {
+    API.fetchWithAuth(cfg.datasets + '/project/' + pid + '?page=0&size=50').then(function(r) { return API.safeJson(r); }).then(function(data) {
       var list = data.content || [];
       datasetSelect.disabled = false;
       datasetSelect.innerHTML = '<option value="">-- Chọn dataset --</option>' + list.map(function(d) {
@@ -217,7 +217,7 @@ body {
         contentUrl: contentUrl,
         metadata: document.getElementById('metadataUrl').value.trim() || null
       })
-    }).then(function(r) { return r.json(); }).then(function() {
+    }).then(function(r) { return API.safeJson(r); }).then(function() {
       showMsg('Tạo data item thành công.');
       document.getElementById('contentUrl').value = '';
       document.getElementById('metadataUrl').value = '';
@@ -241,8 +241,8 @@ body {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ datasetId: datasetId, contentUrls: contentUrls })
     }).then(function(r) {
-      if (!r.ok) return r.json().then(function(d) { throw new Error(d.message || d.error || 'Tạo thất bại'); });
-      return r.json();
+      if (!r.ok) return API.safeJson(r).then(function(d) { throw new Error((d && d.message) || (d && d.error) || 'Tạo thất bại'); });
+      return API.safeJson(r);
     }).then(function(created) {
       var count = Array.isArray(created) ? created.length : 0;
       var skipped = contentUrls.length - count;
@@ -298,12 +298,12 @@ body {
           window.location.href = 'login.html';
           throw new Error('Unauthorized');
         }
-        if (!res.ok) return res.json().then(function(d) {
+        if (!res.ok) return API.safeJson(res).then(function(d) {
           var m = d.message || d.error || ('HTTP ' + res.status);
           if (m === 'Upload failed: null' || (m && m.indexOf('null') !== -1 && m.length < 30)) m = 'Upload thất bại. Kiểm tra cấu hình Supabase.';
           throw new Error(m);
         });
-        return res.json();
+        return API.safeJson(res);
       }).then(function() {
         done++;
         doUpload(index + 1);

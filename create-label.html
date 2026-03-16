@@ -127,7 +127,7 @@ body {
     var v = (this.value || '').trim();
     colorPreview.style.background = v && /^#[0-9A-Fa-f]{3,6}$/.test(v) ? v : '#22c55e';
   });
-  API.fetchWithAuth(cfg.projects + '?page=0&size=100').then(function(r) { return r.json(); }).then(function(data) {
+  API.fetchWithAuth(cfg.projects + '?page=0&size=100').then(function(r) { return API.safeJson(r); }).then(function(data) {
     var list = data.content || [];
     projectSelect.innerHTML = '<option value="">-- Chọn dự án --</option>' + list.map(function(p) {
       return '<option value="' + p.id + '">' + (p.name || p.id) + '</option>';
@@ -151,7 +151,7 @@ body {
         description: document.getElementById('description').value.trim() || null,
         color: color
       })
-    }).then(function(r) { return r.json(); }).then(function() {
+    }).then(function(r) { return API.safeJson(r); }).then(function() {
       msg.textContent = 'Tạo label thành công.';
       msg.style.color = '#4ade80';
       document.getElementById('name').value = '';

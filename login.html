@@ -253,10 +253,11 @@ body {
             body: JSON.stringify(payload)
         })
         .then(function(res) {
-            return res.json().then(function(data) {
-                return { ok: res.ok, status: res.status, data: data };
-            }).catch(function() {
-                return { ok: res.ok, status: res.status, data: { message: res.statusText } };
+            if (res.status === 204) return { ok: res.ok, status: res.status, data: {} };
+            return res.text().then(function(t) {
+                var data = null;
+                if (t && t.trim()) { try { data = JSON.parse(t); } catch (e) { } }
+                return { ok: res.ok, status: res.status, data: data || { message: res.statusText || 'Invalid response' } };
             });
         })
         .then(function(result) {
