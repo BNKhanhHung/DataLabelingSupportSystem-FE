@@ -540,6 +540,7 @@ tbody tr:hover {
                 <button data-filter="DENIED">Từ chối</button>
                 <button data-filter="COMPLETED">Hoàn thành</button>
             </div>
+            <div id="notificationBellContainer" class="notification-bell-wrap"></div>
             <div class="user-pill" id="userPill">
                 <div class="user-avatar"></div>
                 <div class="user-meta">
@@ -596,11 +597,12 @@ tbody tr:hover {
                     <th>Tên dự án</th>
                     <th>Mô tả</th>
                     <th>Ngày tạo</th>
+                    <th>Deadline</th>
                     <th>Thao tác</th>
                 </tr>
             </thead>
             <tbody id="projectsTableBody">
-                <tr><td colspan="4">Đang tải...</td></tr>
+                <tr><td colspan="5">Đang tải...</td></tr>
             </tbody>
         </table>
     </div>
@@ -624,12 +626,13 @@ tbody tr:hover {
                     <th>Annotator</th>
                     <th>Reviewer</th>
                     <th>Trạng thái</th>
+                    <th>Hạn</th>
                     <th>Ngày tạo</th>
                     <th>Hành động</th>
                 </tr>
             </thead>
             <tbody id="tasksTableBody">
-                <tr><td colspan="7">Đang tải...</td></tr>
+                <tr><td colspan="8">Đang tải...</td></tr>
             </tbody>
         </table>
     </div>
@@ -638,11 +641,15 @@ tbody tr:hover {
 
 <script src="api-config.js"></script>
 <script src="api-helper.js"></script>
+<script src="notifications.js"></script>
 <script>
 (function() {
     var API = window.API;
     var cfg = window.API_CONFIG;
     if (!API || !API.requireAuth()) return;
+    if (window.NotificationBell && document.getElementById('notificationBellContainer')) {
+        window.NotificationBell.init(document.getElementById('notificationBellContainer'));
+    }
     var role = (localStorage.getItem('systemRole') || '').toUpperCase();
     if (role !== 'ADMIN' && role !== 'MANAGER') {
         window.location.href = 'user-dashboard.html';
@@ -662,11 +669,12 @@ tbody tr:hover {
         document.getElementById('tableCount').textContent = list.length + (data.totalElements !== undefined ? ' / ' + data.totalElements : '') + ' dự án';
         var tbody = document.getElementById('projectsTableBody');
         if (list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4">Chưa có dự án. <a href="create-project.html" style="color:#22c55e;">Tạo dự án</a></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5">Chưa có dự án. <a href="create-project.html" style="color:#22c55e;">Tạo dự án</a></td></tr>';
             return;
         }
         tbody.innerHTML = list.map(function(p) {
             var created = p.createdAt ? p.createdAt.substring(0, 10) : '--';
+            var deadline = p.deadline ? (p.deadline.length >= 16 ? p.deadline.substring(0, 10) + ' ' + p.deadline.substring(11, 16) : p.deadline.substring(0, 10)) : '--';
             var name = API.escapeHtml(p.name || '');
             var desc = API.escapeHtml(p.description || '');
             var rawId = (p.id !== undefined && p.id !== null) ? p.id : ((p.projectId !== undefined && p.projectId !== null) ? p.projectId : null);
@@ -675,11 +683,11 @@ tbody tr:hover {
             var detailLink = pid
               ? '<a href="' + detailHref + '" class="link-btn" style="color:#6ee7b7;" data-project-id="' + API.escapeHtml(pid) + '" onclick="sessionStorage.setItem(\'viewProjectId\', this.getAttribute(\'data-project-id\') || \'\')">Xem chi tiết</a>'
               : '<span style="color:#64748b;">—</span>';
-            return '<tr><td>' + name + '</td><td>' + desc + '</td><td>' + API.escapeHtml(created) + '</td><td>' + detailLink + '</td></tr>';
+            return '<tr><td>' + name + '</td><td>' + desc + '</td><td>' + API.escapeHtml(created) + '</td><td>' + API.escapeHtml(deadline) + '</td><td>' + detailLink + '</td></tr>';
         }).join('');
     }).catch(function(err) {
         var errMsg = API.escapeHtml(err.message || 'Unknown error');
-        document.getElementById('projectsTableBody').innerHTML = '<tr><td colspan="4">Lỗi: ' + errMsg + '</td></tr>';
+        document.getElementById('projectsTableBody').innerHTML = '<tr><td colspan="5">Lỗi: ' + errMsg + '</td></tr>';
     });
 
     API.fetchWithAuth(cfg.tasks + '?page=0&size=1').then(function(r) { return r.json(); }).then(function(data) {
@@ -713,15 +721,24 @@ tbody tr:hover {
         return s || '--';
     }
 
+    function formatDueDate(dueDate) {
+        if (!dueDate) return '--';
+        var s = String(dueDate);
+        if (s.length >= 16) return s.substring(0, 10) + ' ' + s.substring(11, 16);
+        return s.substring(0, 10);
+    }
+
     function renderTasksTable(list) {
         var tbody = document.getElementById('tasksTableBody');
         if (!list || list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7">Chưa có task nào.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8">Chưa có task nào.</td></tr>';
             return;
         }
         tbody.innerHTML = list.map(function(t) {
             var idShort = (t.id || '').toString().substring(0, 8);
             var created = t.createdAt ? t.createdAt.substring(0, 10) : '--';
+            var dueDisplay = formatDueDate(t.dueDate);
+            var dueForInput = t.dueDate && t.dueDate.length >= 16 ? t.dueDate.substring(0, 16) : '';
             var status = (t.status || 'OPEN').toString();
             var rowId = 'task-row-' + (t.id || '').toString().replace(/-/g, '');
             return '<tr id="' + rowId + '">' +
@@ -730,6 +747,7 @@ tbody tr:hover {
                 '<td>' + (t.annotatorUsername || '--') + '</td>' +
                 '<td>' + (t.reviewerUsername || '--') + '</td>' +
                 '<td><span class="status-pill ' + statusClass(status) + '">' + statusLabel(status) + '</span></td>' +
+                '<td><span class="task-due-display">' + dueDisplay + '</span> <button type="button" class="btn-sm btn-edit task-btn-due" data-task-id="' + t.id + '" data-due="' + (dueForInput || '') + '">Sửa hạn</button></td>' +
                 '<td>' + created + '</td>' +
                 '<td>' +
                 '<select class="task-status-select" data-task-id="' + t.id + '" data-task-row="' + rowId + '">' +
@@ -749,6 +767,29 @@ tbody tr:hover {
     }
 
     function bindTaskActions() {
+        document.querySelectorAll('.task-btn-due').forEach(function(btn) {
+            btn.onclick = function() {
+                var taskId = btn.getAttribute('data-task-id');
+                var currentDue = btn.getAttribute('data-due') || '';
+                var raw = window.prompt('Nhập hạn (YYYY-MM-DDTHH:mm) hoặc để trống để xóa hạn:', currentDue);
+                if (raw === null) return;
+                var dueDate = raw.trim() ? raw.trim() : null;
+                btn.disabled = true;
+                API.fetchWithAuth(cfg.tasks + '/' + taskId + '/due-date', {
+                    method: 'PATCH',
+                    body: JSON.stringify({ dueDate: dueDate })
+                }).then(function(r) {
+                    if (!r.ok) return r.json().then(function(d) { throw new Error(d.message || 'Cập nhật thất bại'); });
+                    return r.json();
+                }).then(function(updated) {
+                    var task = allTasks.find(function(x) { return (x.id || '').toString() === (taskId || '').toString(); });
+                    if (task) task.dueDate = updated.dueDate || null;
+                    renderTasksTable(filteredTaskList());
+                }).catch(function(err) {
+                    alert('Lỗi: ' + (err.message || 'Cập nhật hạn thất bại'));
+                }).finally(function() { btn.disabled = false; });
+            };
+        });
         document.querySelectorAll('.task-btn-update').forEach(function(btn) {
             btn.onclick = function() {
                 var taskId = btn.getAttribute('data-task-id');
@@ -795,12 +836,12 @@ tbody tr:hover {
     }
 
     function loadTasks() {
-        document.getElementById('tasksTableBody').innerHTML = '<tr><td colspan="7">Đang tải...</td></tr>';
+        document.getElementById('tasksTableBody').innerHTML = '<tr><td colspan="8">Đang tải...</td></tr>';
         API.fetchWithAuth(cfg.tasks + '?page=0&size=200&sort=createdAt,desc').then(function(r) { return r.json(); }).then(function(data) {
             allTasks = data.content || [];
             renderTasksTable(filteredTaskList());
         }).catch(function(err) {
-            document.getElementById('tasksTableBody').innerHTML = '<tr><td colspan="7">Lỗi: ' + (err.message || 'Không tải được task') + '</td></tr>';
+            document.getElementById('tasksTableBody').innerHTML = '<tr><td colspan="8">Lỗi: ' + (err.message || 'Không tải được task') + '</td></tr>';
             document.getElementById('tasksTableCount').textContent = 'Lỗi';
         });
     }

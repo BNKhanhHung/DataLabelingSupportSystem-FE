@@ -18,5 +18,6 @@ window.API_CONFIG = {
     datasets: '/api/datasets',
     dataItems: '/api/data-items',
     annotations: '/api/annotations',
-    reviewFeedbacks: '/api/review-feedbacks'
+    reviewFeedbacks: '/api/review-feedbacks',
+    notifications: '/api/notifications'
 };

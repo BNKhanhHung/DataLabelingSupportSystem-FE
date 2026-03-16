@@ -232,6 +232,26 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
     });
   }
 
+  function tryAutoCompleteReview() {
+    Promise.all([loadAnnotations(), loadReviewFeedbacks()]).then(function(results) {
+      var annotations = results[0] || [];
+      var feedbacks = results[1] || [];
+      var reviewedIds = {};
+      feedbacks.forEach(function(f) { if (f.annotationId) reviewedIds[f.annotationId] = true; });
+      var pending = annotations.filter(function(a) {
+        return (a.status === 'SUBMITTED' || a.status === 'Submitted') && !reviewedIds[a.id];
+      });
+      if (pending.length > 0 || annotations.length === 0) return;
+      API.fetchWithAuth(cfg.tasks + '/' + taskId + '/complete-review', { method: 'PATCH' }).then(function(r) {
+        if (r.ok) {
+          var msgEl = document.getElementById('msg');
+          if (msgEl) msgEl.textContent = 'Đã review xong tất cả. Trạng thái task đã cập nhật.';
+          render();
+        }
+      }).catch(function() {});
+    }).catch(function() {});
+  }
+
   function submitReview(annotationId, approved, comment) {
     var status = approved ? 'APPROVED' : 'REJECTED';
     var body = {
@@ -263,6 +283,8 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
       msgEl.textContent = approved ? 'Đã duyệt.' : 'Đã từ chối.';
       msgEl.className = 'ok';
       render();
+      // Sau khi review xong một mục: nếu không còn annotation nào chờ review thì tự gọi complete-review để chuyển trạng thái task
+      tryAutoCompleteReview();
     }).catch(function(err) {
       msgEl.textContent = 'Lỗi: ' + (err.message || '');
       msgEl.className = 'err';

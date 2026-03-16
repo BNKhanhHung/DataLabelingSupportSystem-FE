@@ -90,6 +90,7 @@ a.link-btn:hover { text-decoration: underline; }
       <p>Xem task được giao và quản lý tài khoản</p>
     </div>
     <div class="header-right">
+      <div id="notificationBellContainer" class="notification-bell-wrap"></div>
       <div class="user-pill" id="userPill">
         <div class="user-avatar"></div>
         <div class="user-meta">
@@ -149,11 +150,15 @@ a.link-btn:hover { text-decoration: underline; }
 
 <script src="api-config.js"></script>
 <script src="api-helper.js"></script>
+<script src="notifications.js"></script>
 <script>
 (function() {
   var API = window.API;
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;
+  if (window.NotificationBell && document.getElementById('notificationBellContainer')) {
+    window.NotificationBell.init(document.getElementById('notificationBellContainer'));
+  }
   var role = (localStorage.getItem('systemRole') || '').toUpperCase();
   if (role === 'ADMIN' || role === 'MANAGER') {
     window.location.href = role === 'ADMIN' ? 'admin.html' : 'manager.html';

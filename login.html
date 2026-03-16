@@ -9,9 +9,9 @@
     var token = localStorage.getItem('token');
     if (token) {
         var systemRole = (localStorage.getItem('systemRole') || '').toUpperCase();
-        if (systemRole === 'ADMIN') window.location.replace('admin.html');
-        else if (systemRole === 'MANAGER') window.location.replace('manager.html');
-        else window.location.replace('user-dashboard.html');
+        if (systemRole === 'ADMIN') window.location.replace('/admin.html');
+        else if (systemRole === 'MANAGER') window.location.replace('/manager.html');
+        else window.location.replace('/user-dashboard.html');
     }
 })();
 </script>
@@ -272,7 +272,7 @@ body {
                     if (data.systemRole) localStorage.setItem('systemRole', data.systemRole);
                 }
                 var role = (data.systemRole || '').toUpperCase();
-                var redirectUrl = role === 'ADMIN' ? 'admin.html' : (role === 'MANAGER' ? 'manager.html' : 'user-dashboard.html');
+                var redirectUrl = role === 'ADMIN' ? '/admin.html' : (role === 'MANAGER' ? '/manager.html' : '/user-dashboard.html');
                 window.location.href = redirectUrl;
             } else {
                 var msg = (result.data && (result.data.message || result.data.error)) || 'Đăng nhập thất bại. Vui lòng kiểm tra lại.';
