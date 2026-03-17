@@ -48,6 +48,7 @@ a{color:#38bdf8}
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
 <script>
 (function() {
+  // APIs: GET /api/projects; GET /api/users; GET /api/datasets/project/:id; GET /api/data-items/dataset/:id/status/NEW; POST /api/tasks (tạo task + gán data items).
   var API = window.API;
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;

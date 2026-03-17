@@ -108,6 +108,7 @@ body {
 <script src="api-helper.js"></script>
 <script>
 (function() {
+  // APIs: GET /api/projects (dropdown); POST /api/labels (tạo label: projectId, name, description).
   var API = window.API;
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;

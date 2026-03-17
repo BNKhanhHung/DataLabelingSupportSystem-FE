@@ -156,6 +156,7 @@ body {
 <script src="api-helper.js"></script>
 <script>
 (function() {
+  // APIs: GET /api/projects; GET /api/datasets/project/:id; POST /api/data-items (1 item); POST /api/data-items/bulk (nhiều URL); POST /api/data-items/upload (multipart). Ảnh upload dùng baseUrl + /api/data-items/upload.
   var API = window.API;
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;

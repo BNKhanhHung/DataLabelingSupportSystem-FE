@@ -31,6 +31,7 @@ a{color:#38bdf8}
 <script src="api-helper.js"></script>
 <script>
 (function() {
+  // API: GET /api/review-feedbacks?page&size. Danh sách tất cả review feedback (Manager xem chất lượng review).
   var API = window.API;
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;

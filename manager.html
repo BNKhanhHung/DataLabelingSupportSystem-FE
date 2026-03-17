@@ -512,7 +512,7 @@ tbody tr:hover {
                 <span>Xuất dữ liệu</span>
             </span>
         </li>
-        <li onclick="window.location='index.html'">
+        <li onclick="window.location='manager.html'">
             <span class="label">
                 <span class="nav-dot"></span>
                 <span>Về trang chủ</span>
@@ -644,6 +644,7 @@ tbody tr:hover {
 <script src="notifications.js"></script>
 <script>
 (function() {
+    // APIs: GET /api/users/me; GET /api/projects?page&size; GET /api/tasks?page&size=1 (count); PATCH /api/tasks/:id/due-date; PATCH /api/tasks/:id/status; DELETE /api/tasks/:id; GET /api/tasks?page&size&sort (refresh). Notifications qua notifications.js.
     var API = window.API;
     var cfg = window.API_CONFIG;
     if (!API || !API.requireAuth()) return;

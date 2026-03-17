@@ -198,6 +198,7 @@ body {
 <script src="api-config.js"></script>
 <script>
 (function() {
+    // API: POST api/auth/login (fetch trực tiếp, không dùng fetchWithAuth). Sau khi đăng nhập thành công redirect theo role: ADMIN→admin.html, MANAGER→manager.html, USER→user-dashboard.html.
     var API_CONFIG = window.API_CONFIG || {
         baseUrl: 'http://localhost:8080',
         loginPath: '/api/auth/login'

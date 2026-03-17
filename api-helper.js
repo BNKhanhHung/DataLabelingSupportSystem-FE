@@ -1,5 +1,8 @@
 /**
  * Helper gọi API backend với JWT. Cần load sau api-config.js.
+ * - fetchWithAuth(path, options): gọi fetch với Authorization Bearer token; 401 → xóa token và redirect login.
+ * - requireAuth(): kiểm tra token, chưa có thì redirect login.html.
+ * - getBaseUrl(), getToken(), getJson(), escapeHtml(): tiện ích. Dùng trong mọi trang có gọi API (login dùng fetch trực tiếp để gửi username/password).
  */
 (function() {
     function getBaseUrl() {

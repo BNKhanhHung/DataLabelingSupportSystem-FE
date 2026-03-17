@@ -107,6 +107,7 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
 <script src="api-helper.js"></script>
 <script>
 (function() {
+  // APIs: GET /api/tasks/:id; GET /api/labels/project/:id; GET /api/tasks/:id/items; GET /api/annotations/task/:id; GET /api/review-feedbacks/task/:id; POST /api/annotations (tạo nhãn); PATCH /api/annotations/:id/content (sửa nhãn khi REJECTED); PATCH /api/tasks/:id/submit (nộp task).
   var API = window.API;
   var cfg = window.API_CONFIG;
   var baseUrl = (cfg && cfg.baseUrl) ? cfg.baseUrl.replace(/\/$/, '') : 'http://localhost:8080';

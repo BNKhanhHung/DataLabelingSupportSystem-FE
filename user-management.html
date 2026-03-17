@@ -133,6 +133,7 @@ button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; f
 <script src="api-helper.js"></script>
 <script>
 (function() {
+  // APIs: GET /api/users?page&size; PUT /api/users/:id (sửa user); DELETE /api/users/:id; POST /api/users (tạo user). Back link: manager.html nếu from=manager hoặc role MANAGER, else admin.html.
   var API = window.API;
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;
@@ -142,8 +143,8 @@ button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; f
     return;
   }
   var params = new URLSearchParams(window.location.search);
-  var from = params.get('from') || 'admin';
-  var backUrl = from === 'manager' ? 'manager.html' : 'admin.html';
+  var from = params.get('from');
+  var backUrl = (from === 'manager' || role === 'MANAGER') ? 'manager.html' : 'admin.html';
   document.getElementById('backLink').href = backUrl;
 
   function loadUsers() {

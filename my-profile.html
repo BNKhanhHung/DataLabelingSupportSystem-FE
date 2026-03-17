@@ -93,6 +93,7 @@ a.link-btn:hover { text-decoration: underline; }
 <script src="api-helper.js"></script>
 <script>
 (function() {
+  // APIs: GET /api/users/me; GET /api/tasks/annotator/:userId; GET /api/tasks/reviewer/:userId. Trang cá nhân: thông tin user + task gán nhãn + task review.
   var API = window.API;
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;

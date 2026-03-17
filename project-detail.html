@@ -120,6 +120,7 @@ img.thumb { max-width: 80px; max-height: 60px; object-fit: contain; border-radiu
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
 <script>
 (function() {
+  // APIs: GET /api/projects/:id; PUT /api/projects/:id (sửa dự án); GET /api/labels/project/:id; GET /api/datasets/project/:id; GET /api/data-items/dataset/:id (data items theo dataset). Ảnh dùng baseUrl + /api/uploads/...
   var API = window.API;
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;

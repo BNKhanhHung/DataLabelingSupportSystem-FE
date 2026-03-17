@@ -519,6 +519,7 @@ tbody tr:hover {
 <script src="api-helper.js"></script>
 <script>
 (function() {
+    // APIs: GET /api/users/me; GET /api/users?page&size; GET /api/projects?page&size=1 (đếm). Dashboard Admin: danh sách user, thống kê dự án.
     var API = window.API;
     var cfg = window.API_CONFIG;
     if (!API || !API.requireAuth()) return;

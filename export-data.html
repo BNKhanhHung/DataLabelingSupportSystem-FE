@@ -28,6 +28,7 @@ a{color:#38bdf8}
 <script src="api-helper.js"></script>
 <script>
 (function() {
+  // API: GET /api/data-items?page&size (lấy danh sách để export JSON hoặc CSV).
   var API = window.API;
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;

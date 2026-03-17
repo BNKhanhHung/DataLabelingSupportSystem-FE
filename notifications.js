@@ -1,5 +1,6 @@
 /**
  * Notification bell + dropdown. Cần có API_CONFIG, api-helper.js và element #notificationBellContainer.
+ * APIs: GET /api/notifications/unread-count; GET /api/notifications?page&size; PATCH /api/notifications/:id/read; PATCH /api/notifications/read-all.
  */
 (function() {
   var style = document.createElement('style');

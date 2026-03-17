@@ -98,6 +98,7 @@ body {
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
 <script>
 (function() {
+  // API: POST /api/projects (tạo dự án: name, description, deadline).
   var API = window.API;
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;
