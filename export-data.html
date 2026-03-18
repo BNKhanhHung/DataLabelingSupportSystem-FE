@@ -19,7 +19,12 @@ a{color:#38bdf8}
 <a href="manager.html">← Manager</a>
 <div class="card">
   <h2>Xuất dữ liệu sau khi duyệt</h2>
-  <p id="msg">Chọn nguồn và định dạng xuất.</p>
+  <p style="margin-bottom:12px;color:#94a3b8;">Chọn project để xuất các data items đã được gắn nhãn (ANNOTATED/REVIEWED) của project đó.</p>
+  <label for="projectSelect" style="display:block;margin-bottom:6px;">Project:</label>
+  <select id="projectSelect" style="width:100%;max-width:400px;padding:8px 12px;border-radius:6px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;margin-bottom:16px;">
+    <option value="">-- Chọn project --</option>
+  </select>
+  <p id="msg">Chọn project và định dạng xuất.</p>
   <button class="json" id="btnJson">Export JSON (Data items)</button>
   <button class="csv" id="btnCsv">Export CSV (Data items)</button>
 </div>
@@ -33,36 +38,82 @@ a{color:#38bdf8}
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;
   var msg = document.getElementById('msg');
+  var projectSelect = document.getElementById('projectSelect');
+
+  function loadProjects() {
+    var size = 100;
+    API.fetchWithAuth(cfg.projects + '?page=0&size=' + size).then(function(r) { return r.json(); }).then(function(data) {
+      var list = data.content || [];
+      var totalPages = data.totalPages != null ? data.totalPages : 1;
+      var totalElements = data.totalElements != null ? data.totalElements : list.length;
+      if (totalPages > 1 && list.length < totalElements) {
+        var promises = [];
+        for (var p = 1; p < totalPages; p++) {
+          (function(page) {
+            promises.push(API.fetchWithAuth(cfg.projects + '?page=' + page + '&size=' + size).then(function(res) { return res.json(); }));
+          })(p);
+        }
+        Promise.all(promises).then(function(results) {
+          results.forEach(function(res) { list = list.concat(res.content || []); });
+          renderProjectOptions(list);
+        });
+      } else {
+        renderProjectOptions(list);
+      }
+    }).catch(function() {
+      projectSelect.innerHTML = '<option value="">Không tải được danh sách project</option>';
+    });
+
+    function renderProjectOptions(list) {
+      projectSelect.innerHTML = '<option value="">-- Chọn project --</option>' +
+        list.map(function(p) {
+          var id = (p.id != null) ? (typeof p.id === 'string' ? p.id : String(p.id)) : '';
+          var name = (p.name || id || '—').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+          return '<option value="' + id + '">' + name + '</option>';
+        }).join('');
+    }
+  }
 
   function doExport(format) {
+    var projectId = (projectSelect && projectSelect.value) ? projectSelect.value.trim() : '';
+    if (!projectId) {
+      msg.textContent = 'Vui lòng chọn một project.';
+      msg.style.color = '#f87171';
+      return;
+    }
+    msg.style.color = '';
     msg.textContent = 'Đang tải dữ liệu...';
-    API.fetchWithAuth(cfg.dataItems + '?page=0&size=500').then(function(r) { return r.json(); }).then(function(data) {
-      var list = data.content || [];
+    var url = cfg.dataItems + '/export?projectId=' + encodeURIComponent(projectId);
+    API.fetchWithAuth(url).then(function(r) { return r.json(); }).then(function(list) {
+      if (!Array.isArray(list)) list = [];
       if (list.length === 0) {
-        msg.textContent = 'Không có data item nào.';
+        msg.textContent = 'Project này chưa có data item nào đã gắn nhãn (ANNOTATED/REVIEWED).';
         return;
       }
+      var baseName = 'data-items-project-' + projectId.substring(0, 8);
       if (format === 'json') {
         var blob = new Blob([JSON.stringify(list, null, 2)], { type: 'application/json' });
         var a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'data-items.json';
+        a.download = baseName + '.json';
         a.click();
         URL.revokeObjectURL(a.href);
-        msg.textContent = 'Đã tải xuống data-items.json (' + list.length + ' mục).';
+        msg.textContent = 'Đã tải xuống ' + baseName + '.json (' + list.length + ' mục).';
       } else {
-        var headers = ['id', 'datasetId', 'status', 'contentUrl', 'metadata', 'createdAt'].join(',');
+        var headers = ['id', 'datasetId', 'datasetName', 'status', 'label', 'contentUrl', 'metadata', 'createdAt'].join(',');
         var rows = list.map(function(item) {
-          return [item.id, item.datasetId, item.status, item.contentUrl, (item.metadata || '').replace(/,/g, ';'), item.createdAt].join(',');
+          var label = (item.label != null ? String(item.label) : '').replace(/,/g, ';').replace(/"/g, '""');
+          if (label.indexOf(',') !== -1 || label.indexOf('"') !== -1) label = '"' + label + '"';
+          return [item.id, item.datasetId, (item.datasetName || '').replace(/,/g, ';'), item.status, label, (item.contentUrl || '').replace(/,/g, ';'), (item.metadata || '').replace(/,/g, ';'), item.createdAt].join(',');
         });
         var csv = headers + '\n' + rows.join('\n');
         var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
         var a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'data-items.csv';
+        a.download = baseName + '.csv';
         a.click();
         URL.revokeObjectURL(a.href);
-        msg.textContent = 'Đã tải xuống data-items.csv (' + list.length + ' mục).';
+        msg.textContent = 'Đã tải xuống ' + baseName + '.csv (' + list.length + ' mục).';
       }
     }).catch(function(err) {
       msg.textContent = 'Lỗi: ' + (err.message || '');
@@ -70,6 +121,7 @@ a{color:#38bdf8}
     });
   }
 
+  loadProjects();
   document.getElementById('btnJson').addEventListener('click', function() { doExport('json'); });
   document.getElementById('btnCsv').addEventListener('click', function() { doExport('csv'); });
 })();

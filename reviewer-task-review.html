@@ -204,7 +204,7 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
         var fullUrl = contentUrlFull(url);
         var isImg = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(url) || (fullUrl && fullUrl.indexOf('/api/uploads/') !== -1);
         var contentCell = isImg && fullUrl
-          ? '<img src="' + fullUrl.replace(/"/g, '&quot;') + '" alt="Nội dung" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'inline\';"><span style="display:none;color:#94a3b8;">Không tải ảnh</span>'
+          ? '<img src="' + fullUrl.replace(/"/g, '&quot;') + '" alt="Nội dung" onerror="this.style.display=\'none\'">'
           : (fullUrl ? '<a href="' + fullUrl.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">Xem nội dung</a>' : '<span style="color:#94a3b8;">—</span>');
         var id = (a.id != null ? a.id : '').toString().replace(/"/g, '&quot;');
         return '<tr data-annotation-id="' + id + '">' +

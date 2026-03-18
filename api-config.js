@@ -6,7 +6,7 @@
  * - baseUrl + loginPath → POST login (login.html)
  * - users: GET /me, GET ?, POST, PUT /:id, PATCH /me/password, DELETE /:id (user-management, admin, change-password, my-profile)
  * - projects: GET ?, GET /:id, POST, PUT /:id (manager, project-detail, create-project, assign-task, create-label, create-dataset, create-dataitem)
- * - tasks: GET ?, GET /:id, GET /:id/items, GET /project/:id, GET /annotator/:id, GET /reviewer/:id, POST, PATCH /:id/status, PATCH /:id/due-date, PATCH /:id/submit, PATCH /:id/complete-review, DELETE /:id (manager, assign-task, user-dashboard, annotator-tasks, reviewer-tasks, reviewer-task-review, annotator-label, my-profile)
+ * - tasks: GET ?, GET /:id, GET /:id/items, GET /project/:id, GET /annotator/:id, GET /reviewer/:id (chỉ SUBMITTED), POST, PATCH /:id/status, PATCH /:id/due-date, PATCH /:id/submit, PATCH /:id/complete-review, DELETE /:id
  * - labels: GET /project/:id, POST (project-detail, create-label)
  * - datasets: GET /project/:id, POST (project-detail, assign-task, create-dataset, create-dataitem)
  * - dataItems: GET ?, GET /dataset/:id, GET /dataset/:id/status/NEW, POST, POST /bulk, POST /upload (project-detail, assign-task, create-dataitem, export-data)
