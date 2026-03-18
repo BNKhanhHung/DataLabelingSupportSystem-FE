@@ -128,9 +128,9 @@ a.link-btn:hover { text-decoration: underline; }
       <a href="annotator-tasks.html" class="link-btn">Xem tất cả</a>
     </div>
     <table>
-      <thead><tr><th>Dự án</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+      <thead><tr><th>Dự án</th><th>Trạng thái</th><th>Deadline</th><th>Thao tác</th></tr></thead>
       <tbody id="annotatorTaskBody">
-        <tr><td colspan="3">Đang tải...</td></tr>
+        <tr><td colspan="4">Đang tải...</td></tr>
       </tbody>
     </table>
   </div>
@@ -140,9 +140,9 @@ a.link-btn:hover { text-decoration: underline; }
       <a href="reviewer-tasks.html" class="link-btn">Xem tất cả</a>
     </div>
     <table>
-      <thead><tr><th>Dự án</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+      <thead><tr><th>Dự án</th><th>Trạng thái</th><th>Deadline</th><th>Thao tác</th></tr></thead>
       <tbody id="reviewerTaskBody">
-        <tr><td colspan="3">Đang tải...</td></tr>
+        <tr><td colspan="4">Đang tải...</td></tr>
       </tbody>
     </table>
   </div>
@@ -184,6 +184,14 @@ a.link-btn:hover { text-decoration: underline; }
       document.getElementById('reviewerTaskBody').innerHTML = '<tr><td colspan="3">Chưa có task nào được giao.</td></tr>';
       return;
     }
+    function fmtDue(d) {
+      if (!d) return '--';
+      var s = String(d);
+      // ISO: yyyy-mm-ddThh:mm:ss...
+      if (s.indexOf('T') !== -1) return s.substring(0, 10) + ' ' + s.substring(11, 16);
+      // fallback
+      return s.length >= 16 ? s.substring(0, 16) : s;
+    }
     var annotatorReq = API.fetchWithAuth(cfg.tasks + '/annotator/' + uid + '?page=0&size=20').then(function(r) { return r.json(); });
     var reviewerReq = API.fetchWithAuth(cfg.tasks + '/reviewer/' + uid + '?page=0&size=20').then(function(r) { return r.json(); });
     Promise.all([annotatorReq, reviewerReq]).then(function(results) {
@@ -198,27 +206,27 @@ a.link-btn:hover { text-decoration: underline; }
       var annotatorBody = document.getElementById('annotatorTaskBody');
       var reviewerBody = document.getElementById('reviewerTaskBody');
       if (annotatorList.length === 0) {
-        annotatorBody.innerHTML = '<tr><td colspan="3">Chưa có task cần gán nhãn.</td></tr>';
+        annotatorBody.innerHTML = '<tr><td colspan="4">Chưa có task cần gán nhãn.</td></tr>';
       } else {
         annotatorBody.innerHTML = annotatorList.slice(0, 5).map(function(t) {
           var tid = t != null && (t.id != null || t.taskId != null) ? (typeof (t.id || t.taskId) === 'string' ? (t.id || t.taskId) : String(t.id || t.taskId)) : '';
           var safeTid = (tid || '').replace(/"/g, '&quot;');
-          return '<tr><td>' + (t.projectName || '') + '</td><td>' + (t.status || '') + '</td><td><a href="annotator-label.html?taskId=' + encodeURIComponent(tid) + '" class="link-btn" data-task-id="' + safeTid + '" onclick="sessionStorage.setItem(\'pendingTaskId\', this.getAttribute(\'data-task-id\'))">Gắn nhãn</a></td></tr>';
+          return '<tr><td>' + (t.projectName || '') + '</td><td>' + (t.status || '') + '</td><td>' + fmtDue(t.dueDate) + '</td><td><a href="annotator-label.html?taskId=' + encodeURIComponent(tid) + '" class="link-btn" data-task-id="' + safeTid + '" onclick="sessionStorage.setItem(\'pendingTaskId\', this.getAttribute(\'data-task-id\'))">Gắn nhãn</a></td></tr>';
         }).join('');
       }
       if (reviewerList.length === 0) {
-        reviewerBody.innerHTML = '<tr><td colspan="3">Chưa có task cần review.</td></tr>';
+        reviewerBody.innerHTML = '<tr><td colspan="4">Chưa có task cần review.</td></tr>';
       } else {
         reviewerBody.innerHTML = reviewerList.slice(0, 5).map(function(t) {
           var rid = t != null && (t.id != null || t.taskId != null) ? (typeof (t.id || t.taskId) === 'string' ? (t.id || t.taskId) : String(t.id || t.taskId)) : '';
           var safeRid = (rid || '').replace(/"/g, '&quot;');
-          return '<tr><td>' + (t.projectName || '') + '</td><td>' + (t.status || '') + '</td><td><a href="reviewer-task-review.html?taskId=' + encodeURIComponent(rid) + '" class="link-btn" data-task-id="' + safeRid + '" onclick="sessionStorage.setItem(\'pendingReviewTaskId\', this.getAttribute(\'data-task-id\'))">Review</a></td></tr>';
+          return '<tr><td>' + (t.projectName || '') + '</td><td>' + (t.status || '') + '</td><td>' + fmtDue(t.dueDate) + '</td><td><a href="reviewer-task-review.html?taskId=' + encodeURIComponent(rid) + '" class="link-btn" data-task-id="' + safeRid + '" onclick="sessionStorage.setItem(\'pendingReviewTaskId\', this.getAttribute(\'data-task-id\'))">Review</a></td></tr>';
         }).join('');
       }
     }).catch(function() {
       document.getElementById('cardTaskCount').textContent = '0';
-      document.getElementById('annotatorTaskBody').innerHTML = '<tr><td colspan="3">Không tải được task.</td></tr>';
-      document.getElementById('reviewerTaskBody').innerHTML = '<tr><td colspan="3">Không tải được task.</td></tr>';
+      document.getElementById('annotatorTaskBody').innerHTML = '<tr><td colspan="4">Không tải được task.</td></tr>';
+      document.getElementById('reviewerTaskBody').innerHTML = '<tr><td colspan="4">Không tải được task.</td></tr>';
     });
   }
 

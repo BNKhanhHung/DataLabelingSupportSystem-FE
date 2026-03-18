@@ -89,10 +89,10 @@ button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; f
     <p id="tableCount" style="font-size:13px;color:#94a3b8;margin-bottom:12px;">Đang tải...</p>
     <table>
       <thead>
-        <tr><th>Tên đăng nhập</th><th>Email</th><th>Trạng thái</th><th>Vai trò</th><th>Thao tác</th></tr>
+        <tr><th>Tên đăng nhập</th><th>Email</th><th>Trạng thái</th><th>Vai trò</th><th>Số lần trễ</th><th>Thao tác</th></tr>
       </thead>
       <tbody id="userTableBody">
-        <tr><td colspan="5">Đang tải...</td></tr>
+        <tr><td colspan="6">Đang tải...</td></tr>
       </tbody>
     </table>
   </div>
@@ -154,7 +154,7 @@ button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; f
       document.getElementById('tableCount').textContent = 'Tổng: ' + total + ' người dùng';
       var tbody = document.getElementById('userTableBody');
       if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5">Chưa có người dùng.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6">Chưa có người dùng.</td></tr>';
         return;
       }
       tbody.innerHTML = list.map(function(u) {
@@ -166,8 +166,9 @@ button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; f
         var username = API.escapeHtml(u.username || '');
         var email = API.escapeHtml(u.email || '');
         var role = API.escapeHtml(r);
+        var warnings = (u.warnings != null ? Number(u.warnings) : 0);
         var userId = API.escapeHtml(String(u.id || ''));
-        return '<tr><td>' + username + '</td><td>' + email + '</td><td><span class="status-' + st + '">' + API.escapeHtml(st) + '</span></td><td><span class="role-badge ' + roleClass + '">' + role + '</span></td><td><button type="button" class="btn-small btn-secondary edit-btn" data-user="' + API.escapeHtml(JSON.stringify({id: u.id, username: u.username, email: u.email, status: u.status, systemRole: r})) + '">Sửa</button><button type="button" class="btn-small btn-danger delete-btn" data-id="' + userId + '">Xóa</button></td></tr>';
+        return '<tr><td>' + username + '</td><td>' + email + '</td><td><span class="status-' + st + '">' + API.escapeHtml(st) + '</span></td><td><span class="role-badge ' + roleClass + '">' + role + '</span></td><td>' + warnings + '</td><td><button type="button" class="btn-small btn-secondary edit-btn" data-user="' + API.escapeHtml(JSON.stringify({id: u.id, username: u.username, email: u.email, status: u.status, systemRole: r})) + '">Sửa</button><button type="button" class="btn-small btn-danger delete-btn" data-id="' + userId + '">Xóa</button></td></tr>';
       }).join('');
       tbody.querySelectorAll('button.edit-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
@@ -186,7 +187,7 @@ button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; f
       });
     }).catch(function(err) {
       var errMsg = API.escapeHtml(err.message || 'Unknown error');
-      document.getElementById('userTableBody').innerHTML = '<tr><td colspan="5">Lỗi: ' + errMsg + '</td></tr>';
+      document.getElementById('userTableBody').innerHTML = '<tr><td colspan="6">Lỗi: ' + errMsg + '</td></tr>';
     });
   }
 
