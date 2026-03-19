@@ -430,6 +430,80 @@ tbody tr:hover {
     font-size: 12px;
 }
 
+/* Assign modal */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.75);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    z-index: 9999;
+}
+.modal {
+    width: 100%;
+    max-width: 520px;
+    background: rgba(15, 23, 42, 0.98);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 14px;
+    padding: 16px;
+    color: #e5e7eb;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+}
+.modal h3 {
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+.modal .hint {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 12px;
+    line-height: 1.35;
+}
+.modal label {
+    display: block;
+    font-size: 13px;
+    color: #cbd5e1;
+    margin: 10px 0 6px;
+}
+.modal select {
+    width: 100%;
+    padding: 10px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(2, 6, 23, 0.6);
+    color: #e2e8f0;
+    outline: none;
+}
+.modal .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 14px;
+}
+.modal .btn {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+}
+.modal .btn.secondary {
+    background: rgba(148, 163, 184, 0.15);
+    color: #e2e8f0;
+}
+.modal .btn.primary {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.95), rgba(14, 165, 233, 0.85));
+    color: #041015;
+    border-color: rgba(34, 197, 94, 0.25);
+}
+.modal .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 @media (max-width: 900px) {
     .sidebar {
         display: none;
@@ -645,6 +719,22 @@ tbody tr:hover {
 
 </div>
 
+<!-- Modal: Sửa phân công -->
+<div id="assignModalBackdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="assignModalTitle">
+        <h3 id="assignModalTitle">Sửa phân công task</h3>
+        <div class="hint" id="assignModalHint">Chọn annotator và reviewer theo tên, rồi bấm Lưu.</div>
+        <label for="assignAnnotatorSelect">Annotator</label>
+        <select id="assignAnnotatorSelect"></select>
+        <label for="assignReviewerSelect">Reviewer</label>
+        <select id="assignReviewerSelect"></select>
+        <div class="actions">
+            <button type="button" class="btn secondary" id="assignModalCancel">Hủy</button>
+            <button type="button" class="btn primary" id="assignModalSave">Lưu</button>
+        </div>
+    </div>
+</div>
+
 <script src="api-config.js"></script>
 <script src="api-helper.js"></script>
 <script src="notifications.js"></script>
@@ -707,6 +797,100 @@ tbody tr:hover {
     // ── Tasks table: load, filter, edit status, delete ───────────────────────
     var allTasks = [];
     var taskFilter = 'ALL'; // ALL | IN_PROGRESS | COMPLETED | OPEN
+    var cachedUsers = null; // [{id, username, email, systemRole, ...}]
+    var currentAssignTaskId = null;
+
+    var assignBackdrop = document.getElementById('assignModalBackdrop');
+    var assignAnnSelect = document.getElementById('assignAnnotatorSelect');
+    var assignRevSelect = document.getElementById('assignReviewerSelect');
+    var assignBtnCancel = document.getElementById('assignModalCancel');
+    var assignBtnSave = document.getElementById('assignModalSave');
+    var assignHint = document.getElementById('assignModalHint');
+
+    function closeAssignModal() {
+        currentAssignTaskId = null;
+        assignBackdrop.style.display = 'none';
+        assignBackdrop.setAttribute('aria-hidden', 'true');
+    }
+
+    function openAssignModal(task) {
+        if (!task || !task.id) return;
+        currentAssignTaskId = String(task.id);
+        assignHint.textContent = 'Task ' + currentAssignTaskId.substring(0, 8) + '... · Chọn annotator/reviewer rồi bấm Lưu.';
+        assignBackdrop.style.display = 'flex';
+        assignBackdrop.setAttribute('aria-hidden', 'false');
+
+        ensureUsersLoaded(function(users) {
+            var role = function(r) { return (r || '').toUpperCase(); };
+            var list = (users || []).filter(function(u) {
+                var r = role(u.systemRole);
+                return r !== 'ADMIN' && r !== 'MANAGER';
+            });
+
+            var options = '<option value="">-- Chọn --</option>' + list.map(function(u) {
+                var name = API.escapeHtml(u.username || u.email || u.id);
+                var id = API.escapeHtml(String(u.id || ''));
+                return '<option value="' + id + '">' + name + '</option>';
+            }).join('');
+
+            assignAnnSelect.innerHTML = options;
+            assignRevSelect.innerHTML = options;
+
+            var curAnn = task.annotatorId != null ? String(task.annotatorId) : '';
+            var curRev = task.reviewerId != null ? String(task.reviewerId) : '';
+            if (curAnn) assignAnnSelect.value = curAnn;
+            if (curRev) assignRevSelect.value = curRev;
+        });
+    }
+
+    function ensureUsersLoaded(done) {
+        if (cachedUsers) { done(cachedUsers); return; }
+        API.fetchWithAuth(cfg.users + '?page=0&size=200')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                cachedUsers = data && data.content ? data.content : [];
+                done(cachedUsers);
+            })
+            .catch(function() {
+                cachedUsers = [];
+                done(cachedUsers);
+            });
+    }
+
+    assignBtnCancel.addEventListener('click', closeAssignModal);
+    assignBackdrop.addEventListener('click', function(e) {
+        if (e.target === assignBackdrop) closeAssignModal();
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && assignBackdrop.style.display === 'flex') closeAssignModal();
+    });
+
+    assignBtnSave.addEventListener('click', function() {
+        if (!currentAssignTaskId) return;
+        var annotatorId = (assignAnnSelect.value || '').trim();
+        var reviewerId = (assignRevSelect.value || '').trim();
+        if (!annotatorId || !reviewerId) {
+            alert('Vui lòng chọn đầy đủ annotator và reviewer.');
+            return;
+        }
+        assignBtnSave.disabled = true;
+        API.fetchWithAuth(cfg.tasks + '/' + encodeURIComponent(currentAssignTaskId) + '/assign', {
+            method: 'PATCH',
+            body: JSON.stringify({ annotatorId: annotatorId, reviewerId: reviewerId })
+        }).then(function(r) {
+            if (!r.ok) return r.json().then(function(d) { throw new Error(d.message || 'Cập nhật phân công thất bại'); });
+            return r.json();
+        }).then(function(updated) {
+            var t = allTasks.find(function(x) { return String(x.id) === String(currentAssignTaskId); });
+            if (t) Object.assign(t, updated || {});
+            closeAssignModal();
+            renderTasksTable(filteredTaskList());
+        }).catch(function(err) {
+            alert('Lỗi: ' + (err.message || 'Cập nhật phân công thất bại'));
+        }).finally(function() {
+            assignBtnSave.disabled = false;
+        });
+    });
 
     function statusClass(s) {
         if (s === 'OPEN') return 'status-open';
@@ -769,6 +953,7 @@ tbody tr:hover {
                 '<option value="COMPLETED"' + (status === 'COMPLETED' ? ' selected' : '') + '>Hoàn thành</option>' +
                 '</select> ' +
                 '<button type="button" class="btn-sm btn-edit task-btn-update" data-task-id="' + t.id + '">Cập nhật</button> ' +
+                '<button type="button" class="btn-sm btn-edit task-btn-assign" data-task-id="' + t.id + '">Sửa phân công</button> ' +
                 '<button type="button" class="btn-sm btn-delete task-btn-delete" data-task-id="' + t.id + '">Xóa</button>' +
                 '</td></tr>';
         }).join('');
@@ -836,6 +1021,15 @@ tbody tr:hover {
                 }).catch(function(err) {
                     alert('Lỗi: ' + (err.message || 'Xóa thất bại'));
                 }).finally(function() { btn.disabled = false; });
+            };
+        });
+
+        document.querySelectorAll('.task-btn-assign').forEach(function(btn) {
+            btn.onclick = function() {
+                var taskId = btn.getAttribute('data-task-id');
+                var task = allTasks.find(function(x) { return (x.id || '').toString() === (taskId || '').toString(); });
+                if (!task) return;
+                openAssignModal(task);
             };
         });
     }
