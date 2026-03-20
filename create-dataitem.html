@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!--
+  create-dataitem.html — Thêm data item vào dataset (ADMIN/MANAGER).
+  Chọn project → dataset; tab "Nhiều URL" POST /api/data-items/bulk; tab Upload POST multipart /api/data-items/upload (fetch + Bearer).
+-->
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
@@ -81,7 +85,7 @@ body {
   </nav>
   <div class="card">
     <h1>Thêm Data Item</h1>
-    <p class="sub">Chọn dự án và dataset, sau đó thêm bằng URL hoặc upload file.</p>
+    <p class="sub">Chọn dự án và dataset, sau đó thêm bằng nhiều URL (mỗi dòng một URL) hoặc upload file.</p>
 
     <div class="form-group">
       <label for="projectId">Dự án *</label>
@@ -97,28 +101,11 @@ body {
     </div>
 
     <div class="tabs">
-      <button type="button" id="tabUrl" class="active">Một URL</button>
-      <button type="button" id="tabBulk">Nhiều URL</button>
+      <button type="button" id="tabBulk" class="active">Nhiều URL</button>
       <button type="button" id="tabUpload">Upload file</button>
     </div>
 
-    <div id="panelUrl" class="panel active">
-      <form id="formUrl">
-        <div class="form-group">
-          <label for="contentUrl">Content URL *</label>
-          <input type="url" id="contentUrl" placeholder="https://example.com/image.jpg" maxlength="1000">
-        </div>
-        <div class="form-group">
-          <label for="metadataUrl">Metadata (tùy chọn)</label>
-          <textarea id="metadataUrl" rows="2" placeholder="JSON hoặc text mô tả"></textarea>
-        </div>
-        <div class="form-actions">
-          <button type="submit" id="btnUrl" class="btn-primary">Tạo 1 Data Item</button>
-        </div>
-      </form>
-    </div>
-
-    <div id="panelBulk" class="panel">
+    <div id="panelBulk" class="panel active">
       <form id="formBulk">
         <div class="form-group">
           <label for="contentUrlsBulk">Nhiều Content URL * (mỗi dòng một URL)</label>
@@ -156,7 +143,7 @@ body {
 <script src="api-helper.js"></script>
 <script>
 (function() {
-  // APIs: GET /api/projects; GET /api/datasets/project/:id; POST /api/data-items (1 item); POST /api/data-items/bulk (nhiều URL); POST /api/data-items/upload (multipart). Ảnh upload dùng baseUrl + /api/data-items/upload.
+  // APIs: GET /api/projects; GET /api/datasets/project/:id; POST /api/data-items/bulk (nhiều URL); POST /api/data-items/upload (multipart). Ảnh upload dùng baseUrl + /api/data-items/upload.
   var API = window.API;
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;
@@ -192,40 +179,15 @@ body {
     }).catch(function() { datasetSelect.disabled = false; datasetSelect.innerHTML = '<option value="">Lỗi tải dataset</option>'; });
   });
   function setActiveTab(activeTabId) {
-    ['tabUrl', 'tabBulk', 'tabUpload'].forEach(function(id) {
+    ['tabBulk', 'tabUpload'].forEach(function(id) {
       document.getElementById(id).classList.toggle('active', id === activeTabId);
     });
-    ['panelUrl', 'panelBulk', 'panelUpload'].forEach(function(id) {
-      document.getElementById(id).classList.toggle('active', id === 'panel' + activeTabId.replace('tab', ''));
+    ['panelBulk', 'panelUpload'].forEach(function(id) {
+      document.getElementById(id).classList.toggle('active', id === activeTabId.replace('tab', 'panel'));
     });
   }
-  document.getElementById('tabUrl').addEventListener('click', function() { setActiveTab('tabUrl'); });
   document.getElementById('tabBulk').addEventListener('click', function() { setActiveTab('tabBulk'); });
   document.getElementById('tabUpload').addEventListener('click', function() { setActiveTab('tabUpload'); });
-  document.getElementById('formUrl').addEventListener('submit', function(e) {
-    e.preventDefault();
-    var datasetId = datasetSelect.value;
-    var contentUrl = document.getElementById('contentUrl').value.trim();
-    if (!datasetId) { showMsg('Vui lòng chọn dự án và dataset.', true); return; }
-    if (!contentUrl) { showMsg('Vui lòng nhập Content URL.', true); return; }
-    var btn = document.getElementById('btnUrl');
-    btn.disabled = true;
-    showMsg('Đang tạo...', false);
-    API.fetchWithAuth(cfg.dataItems, {
-      method: 'POST',
-      body: JSON.stringify({
-        datasetId: datasetId,
-        contentUrl: contentUrl,
-        metadata: document.getElementById('metadataUrl').value.trim() || null
-      })
-    }).then(function(r) { return r.json(); }).then(function() {
-      showMsg('Tạo data item thành công.');
-      document.getElementById('contentUrl').value = '';
-      document.getElementById('metadataUrl').value = '';
-    }).catch(function(err) {
-      showMsg('Lỗi: ' + (err.message || 'Tạo thất bại'), true);
-    }).finally(function() { btn.disabled = false; });
-  });
 
   document.getElementById('formBulk').addEventListener('submit', function(e) {
     e.preventDefault();

@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!--
+  my-profile.html — Trang cá nhân (USER).
+  Sidebar + thông tin GET /api/users/me; hai bảng task lấy từ GET .../tasks/annotator/:id và .../reviewer/:id.
+  ADMIN/MANAGER bị chuyển sang admin.html / manager.html. Đăng xuất: xóa localStorage → login.html.
+-->
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
@@ -41,6 +46,7 @@ a.link-btn:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
+<!-- Layout: sidebar trái + main (header, card hồ sơ, 2 section bảng task) -->
 
 <div class="sidebar">
   <div class="sidebar-header">
@@ -93,7 +99,9 @@ a.link-btn:hover { text-decoration: underline; }
 <script src="api-helper.js"></script>
 <script>
 (function() {
-  // APIs: GET /api/users/me; GET /api/tasks/annotator/:userId; GET /api/tasks/reviewer/:userId. Trang cá nhân: thông tin user + task gán nhãn + task review.
+  // IIFE: tránh ô nhiễm biến toàn cục.
+  // GET /me → điền username/email/role/status; đồng bộ userId vào localStorage.
+  // GET /tasks/annotator/:id và /reviewer/:id → renderTaskRows (tối đa 10 dòng), link annotator-label / reviewer-task-review.
   var API = window.API;
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;

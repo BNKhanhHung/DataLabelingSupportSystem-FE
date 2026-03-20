@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!--
+  index.html — Điểm vào ứng dụng.
+  Chức năng: Chuyển hướng ngay sang login.html (không giữ người dùng ở trang này).
+-->
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
@@ -6,6 +10,7 @@
 <title>Data Labeling Support System</title>
 <script>
 (function() {
+    // Thay thế lịch sử trình duyệt để nút Back không quay lại index vô hạn
     window.location.replace('login.html');
 })();
 </script>

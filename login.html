@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+<!--
+  login.html — Đăng nhập.
+  - Nếu đã có token: redirect admin / manager / user-dashboard theo systemRole.
+  - Form: POST JSON tới API_CONFIG.baseUrl + loginPath (usernameOrEmail, password).
+  - Không dùng API.fetchWithAuth (chưa có JWT). Lưu token + user vào localStorage khi thành công.
+-->
 <html lang="vi">
 <head>
 <meta charset="UTF-8">

@@ -1,12 +1,17 @@
 /**
- * Notification bell + dropdown. Cần có API_CONFIG, api-helper.js và element #notificationBellContainer.
- * APIs: GET /api/notifications/unread-count; GET /api/notifications?page&size; PATCH /api/notifications/:id/read; PATCH /api/notifications/read-all.
+ * notifications.js — Chuông thông báo + dropdown danh sách.
+ * Phụ thuộc: api-config.js, api-helper.js. Trên trang: div#notificationBellContainer rồi NotificationBell.init(container).
+ *
+ * Luồng: fetch unread-count + danh sách trang đầu; click item → PATCH read; TASK → sessionStorage + annotator-tasks.html.
+ * Làm mới định kỳ 45s (outerHTML lại DOM nên bind lại sự kiện).
  */
 (function() {
+  // CSS inject (một dòng minify) để không cần file .css riêng
   var style = document.createElement('style');
   style.textContent = '.notification-bell-wrap{display:inline-flex;align-items:center}.notif-bell-wrap{position:relative}.notif-bell-btn{background:rgba(15,23,42,0.85);border:1px solid rgba(148,163,184,0.5);color:#e5e7eb;width:40px;height:40px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px}.notif-bell-btn:hover{background:rgba(51,65,85,0.9)}.notif-bell-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;background:#ef4444;color:#fff;font-size:11px;font-weight:600;border-radius:999px;display:flex;align-items:center;justify-content:center}.notif-dropdown{display:none;position:absolute;top:100%;right:0;margin-top:8px;width:320px;max-height:400px;background:rgba(15,23,42,0.98);border:1px solid #334155;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.4);z-index:1000;overflow:hidden}.notif-dropdown-open{display:flex;flex-direction:column}.notif-dropdown-header{padding:12px 14px;border-bottom:1px solid #334155;font-weight:600;color:#e5e7eb}.notif-dropdown-list{max-height:280px;overflow-y:auto}.notif-empty,.notif-loading{padding:20px;text-align:center;color:#94a3b8;font-size:13px}.notif-item{padding:12px 14px;border-bottom:1px solid #334155;cursor:pointer;transition:background 0.15s}.notif-item:hover{background:rgba(51,65,85,0.6)}.notif-item.notif-unread{background:rgba(34,197,94,0.08)}.notif-item-title{font-size:13px;font-weight:500;color:#e5e7eb;margin-bottom:4px}.notif-item-msg{font-size:12px;color:#94a3b8;margin-bottom:4px}.notif-item-time{font-size:11px;color:#64748b}.notif-dropdown-footer{padding:10px 14px;border-top:1px solid #334155}.notif-mark-all{background:transparent;border:none;color:#38bdf8;font-size:12px;cursor:pointer;padding:4px 0}.notif-mark-all:hover{text-decoration:underline}';
   document.head.appendChild(style);
 
+  /** Trả về { cfg, api } hoặc null nếu thiếu dependency */
   function getConfig() {
     var cfg = window.API_CONFIG;
     var api = window.API;
@@ -14,6 +19,7 @@
     return { cfg: cfg, api: api };
   }
 
+  /** Tạo chuỗi HTML chuông + dropdown (innerHTML) */
   function renderBell(unreadCount, list) {
     var count = Math.min(99, parseInt(unreadCount, 10) || 0);
     var items = list && list.length ? list : [];
@@ -41,6 +47,7 @@
       '</div></div>';
   }
 
+  /** Gọi tuần tự unread-count rồi danh sách; gọi callback(count, content[]) */
   function fetchUnreadAndList(config, callback) {
     config.api.fetchWithAuth(config.cfg.notifications + '/unread-count').then(function(r) { return r.ok ? r.json() : { count: 0 }; }).catch(function() { return { count: 0 }; }).then(function(data) {
       var count = data.count || 0;
@@ -50,6 +57,7 @@
     });
   }
 
+  /** PATCH một thông báo đã đọc; thenRefresh=true thì fetch lại và thay DOM */
   function markRead(config, id, thenRefresh) {
     config.api.fetchWithAuth(config.cfg.notifications + '/' + id + '/read', { method: 'PATCH' }).then(function() {
       if (thenRefresh) fetchUnreadAndList(config, function(c, list) {
@@ -60,6 +68,7 @@
     }).catch(function() {});
   }
 
+  /** Gắn click chuông, item, đánh dấu tất cả, đóng khi click ngoài */
   function bindNotifEvents(config) {
     var btn = document.getElementById('notifBellBtn');
     var dropdown = document.getElementById('notifDropdown');
@@ -101,6 +110,7 @@
     });
   }
 
+  /** Nhận DOM container; requireAuth; tải dữ liệu ban đầu + setInterval 45s */
   function init(container) {
     if (!container) return;
     var config = getConfig();

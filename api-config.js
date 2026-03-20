@@ -13,22 +13,26 @@
  * - annotations: GET /task/:id, POST, PATCH /:id/content (annotator-label, reviewer-task-review)
  * - reviewFeedbacks: GET /task/:id, GET /reviewer/:id, POST (reviewer-task-review, reviewer-review, manager-review, annotator-label)
  * - notifications: GET ?, GET /unread-count, PATCH /:id/read, PATCH /read-all, POST /check-overdue (notifications.js, manager, user-dashboard)
+ *
+ * File này chỉ gán window.API_CONFIG — không gọi mạng. Mọi trang (trừ login) nên load api-config.js trước api-helper.js.
  */
 window.API_CONFIG = {
+    // Host backend (ví dụ http://localhost:8080). Không có dấu / cuối (helper sẽ nối path).
     baseUrl: 'http://localhost:8080',
+    // Đường dẫn đăng nhập tương đối baseUrl — login.html dùng trực tiếp.
     loginPath: '/api/auth/login',
     auth: {
         login: '/api/auth/login',
         register: '/api/auth/register'
     },
-    users: '/api/users',
-    roles: '/api/roles',
-    projects: '/api/projects',
-    tasks: '/api/tasks',
-    userRoles: '/api/user-roles',
-    labels: '/api/labels',
-    datasets: '/api/datasets',
-    dataItems: '/api/data-items',
+    users: '/api/users',           // CRUD user, /me, /me/password
+    roles: '/api/roles',           // Danh sách vai trò hệ thống
+    projects: '/api/projects',     // Dự án
+    tasks: '/api/tasks',           // Task + assign, submit, review...
+    userRoles: '/api/user-roles',  // Gán vai trò user (nếu dùng)
+    labels: '/api/labels',         // Nhãn theo project
+    datasets: '/api/datasets',     // Dataset theo project
+    dataItems: '/api/data-items',  // Data item, bulk, upload
     annotations: '/api/annotations',
     reviewFeedbacks: '/api/review-feedbacks',
     notifications: '/api/notifications'
