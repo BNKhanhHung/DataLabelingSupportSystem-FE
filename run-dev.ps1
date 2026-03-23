@@ -22,7 +22,8 @@ $hasPython = Get-Command python -ErrorAction SilentlyContinue
 if ($hasNode) {
     Write-Host "[OK] Frontend: npx serve -l 3000" -ForegroundColor Green
     Set-Location $FE_PATH
-    npx --yes serve -s -l 3000
+    # KHONG dung -s: voi SPA mode, /login tro ve index.html -> vong lap chuyen huong voi login.html
+    npx --yes serve -l 3000
 } elseif ($hasPython) {
     Write-Host "[OK] Frontend: Python http.server 3000" -ForegroundColor Green
     Set-Location $FE_PATH

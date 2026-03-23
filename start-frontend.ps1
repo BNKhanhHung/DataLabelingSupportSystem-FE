@@ -6,5 +6,5 @@ Write-Host "Frontend: http://localhost:3000" -ForegroundColor Green
 Write-Host "Dang mo trinh duyet..." -ForegroundColor Cyan
 Start-Process "http://localhost:3000"
 
-# -s = single page app (redirect 404 -> index.html), -l 3000 = port, bind moi interface
-npx --yes serve -s -l 3000 --no-clipboard
+# Khong dung -s: tranh vong lap /login -> index.html -> login.html -> /login
+npx --yes serve -l 3000 --no-clipboard
