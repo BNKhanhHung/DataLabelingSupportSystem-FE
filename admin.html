@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!--
+  admin.html — Dashboard quản trị (ADMIN hoặc MANAGER đều vào được; user thường bị chuyển user-dashboard).
+  Hiển thị: thẻ thống kê user/project, bảng danh sách user. API: GET /users/me, GET /users, GET /projects (đếm).
+-->
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
@@ -519,6 +523,7 @@ tbody tr:hover {
 <script src="api-helper.js"></script>
 <script>
 (function() {
+    // APIs: GET /api/users/me; GET /api/users?page&size; GET /api/projects?page&size=1 (đếm). Dashboard Admin: danh sách user, thống kê dự án.
     var API = window.API;
     var cfg = window.API_CONFIG;
     if (!API || !API.requireAuth()) return;

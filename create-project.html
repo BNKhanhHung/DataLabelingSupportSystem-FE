@@ -1,10 +1,25 @@
 <!DOCTYPE html>
+<!--
+  create-project.html
+  ───────────────────
+  Mục đích: Form tạo dự án (Project) mới cho Manager.
+  Điều hướng: Sau khi tạo thành công, ~1.5s chuyển manager.html.
+
+  Phụ thuộc JS ngoài: Flatpickr (CDN) — lịch + giờ 24h, locale tiếng Việt.
+  API: POST /api/projects
+  Body JSON: { name (bắt buộc), description (chuỗi, có thể rỗng), deadline? }
+  - deadline: nếu user chọn trong Flatpickr, chuỗi "Y-m-d H:i" được đổi khoảng trắng giữa ngày/giờ thành "T"
+    để gần với ISO (backend parse LocalDateTime tùy cấu hình).
+
+  Phân quyền: requireAuth() — user đã đăng nhập; thường chỉ manager vào trang này (không chặn role ở FE).
+-->
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tạo Project - Data Labeling</title>
 <style>
+/* Reset + nền gradient tối */
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
 body {
   min-height: 100vh;
@@ -59,6 +74,8 @@ body {
 .btn-back:hover { background: #475569; }
 #msg { margin-top: 16px; font-size: 14px; }
 </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
 </head>
 <body>
 <div class="page">
@@ -77,6 +94,12 @@ body {
         <label for="description">Mô tả</label>
         <textarea id="description" placeholder="Mô tả dự án (tùy chọn)"></textarea>
       </div>
+      <div class="form-group">
+        <label for="deadline">Hạn hoàn thành (Deadline)</label>
+        <!-- readonly: chỉ chọn qua Flatpickr, không gõ tay (allowInput: false) -->
+        <input type="text" id="deadline" readonly placeholder="Bấm để chọn ngày và giờ" style="cursor:pointer;">
+        <small style="color:#94a3b8;font-size:12px;display:block;margin-top:6px;">Bấm vào ô để mở lịch và đồng hồ. Tùy chọn. Để trống nếu chưa xác định.</small>
+      </div>
       <div class="form-actions">
         <button type="submit" id="btn" class="btn-primary">Tạo Project</button>
         <a href="manager.html" class="btn-back">Hủy / Quay lại</a>
@@ -87,11 +110,26 @@ body {
 </div>
 <script src="api-config.js"></script>
 <script src="api-helper.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
 <script>
 (function() {
   var API = window.API;
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;
+
+  /* Flatpickr: datetime 24h, định dạng hiển thị Y-m-d H:i; mở picker khi focus ô deadline */
+  flatpickr('#deadline', {
+    enableTime: true,
+    time_24hr: true,
+    dateFormat: 'Y-m-d H:i',
+    allowInput: false,
+    locale: 'vn'
+  });
+  document.getElementById('deadline').addEventListener('focus', function() {
+    this._flatpickr && this._flatpickr.open();
+  });
+
   var form = document.getElementById('form');
   var btn = document.getElementById('btn');
   var msg = document.getElementById('msg');
@@ -102,14 +140,19 @@ body {
     btn.disabled = true;
     msg.textContent = 'Đang tạo...';
     msg.style.color = '#94a3b8';
+    /* Chuẩn hóa deadline: thay khoảng trắng giữa ngày và giờ bằng 'T' (gần ISO-8601) nếu có giá trị */
+    var deadlineInput = document.getElementById('deadline').value.trim().replace(' ', 'T');
+    var payload = { name: name, description: document.getElementById('description').value.trim() || '' };
+    if (deadlineInput) payload.deadline = deadlineInput;
     API.fetchWithAuth(cfg.projects, {
       method: 'POST',
-      body: JSON.stringify({ name: name, description: document.getElementById('description').value.trim() || '' })
-    }).then(function(r) { return API.safeJson(r); }).then(function() {
+      body: JSON.stringify(payload)
+    }).then(function(r) { return r.json(); }).then(function() {
       msg.textContent = 'Tạo project thành công.';
       msg.style.color = '#4ade80';
       document.getElementById('name').value = '';
       document.getElementById('description').value = '';
+      document.getElementById('deadline').value = '';
       setTimeout(function() { window.location.href = 'manager.html'; }, 1500);
     }).catch(function(err) {
       msg.textContent = 'Lỗi: ' + (err.message || 'Tạo thất bại');

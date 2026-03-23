@@ -1,12 +1,27 @@
 <!DOCTYPE html>
+<!--
+  user-dashboard.html — Dashboard người dùng (annotator/reviewer).
+  Tổng quan: thẻ đếm task, 2 bảng preview, chuông thông báo (notifications.js). Chi tiết từng khối có chú thích trong file.
+-->
+<!-- Khai báo HTML5; trình duyệt hiển thị ở chế độ chuẩn -->
 <html lang="vi">
+<!-- lang="vi": ngôn ngữ nội dung, hỗ trợ đọc màn hình / SEO -->
 <head>
+<!-- Phần head: metadata và CSS, không hiển thị trực tiếp trên trang -->
 <meta charset="UTF-8">
+<!-- Mã hóa UTF-8 để hiển thị đúng tiếng Việt -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Viewport: co giãn theo màn hình mobile, zoom ban đầu = 1 -->
 <title>Dashboard - Data Labeling</title>
+<!-- Tiêu đề tab trình duyệt -->
 <style>
+/* ========== RESET & NỀN TRANG ========== */
+/* *: áp dụng cho mọi phần tử — xóa margin/padding mặc định, border-box để width tính cả padding */
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+/* body: layout flex full chiều cao; nền gradient tối; màu chữ mặc định cho vùng main */
 body { display: flex; min-height: 100vh; background: radial-gradient(circle at top left, #4f46e5 0, #020617 45%, #020617 100%); color: #0f172a; }
+
+/* ========== SIDEBAR (menu trái) ========== */
 .sidebar { width: 260px; background: rgba(15, 23, 42, 0.98); color: white; padding: 20px 18px; display: flex; flex-direction: column; border-right: 1px solid rgba(148, 163, 184, 0.2); }
 .sidebar-header { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
 .sidebar-logo { width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, #22c55e, #0ea5e9); }
@@ -21,6 +36,8 @@ body { display: flex; min-height: 100vh; background: radial-gradient(circle at t
 .sidebar-nav li.active { background: linear-gradient(135deg, rgba(79, 70, 229, 0.9), rgba(99, 102, 241, 0.9)); }
 .sidebar-nav li:hover { background: rgba(55, 65, 81, 0.9); transform: translateY(-1px); }
 .sidebar-footer { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(148, 163, 184, 0.25); font-size: 12px; color: #9ca3af; }
+
+/* ========== VÙNG NỘI DUNG CHÍNH ========== */
 .main { flex: 1; padding: 20px 28px; display: flex; flex-direction: column; gap: 18px; background: radial-gradient(circle at top left, rgba(99, 102, 241, 0.2) 0, rgba(15, 23, 42, 0.02) 40%, #020617 100%); }
 .header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .header-left h1 { font-size: 24px; color: #f9fafb; margin-bottom: 4px; }
@@ -31,6 +48,8 @@ body { display: flex; min-height: 100vh; background: radial-gradient(circle at t
 .user-meta span { display: block; line-height: 1.2; }
 .user-meta span:first-child { font-size: 12px; }
 .user-meta span:last-child { font-size: 11px; color: #9ca3af; }
+
+/* ========== THẺ THỐNG KÊ (cards) ========== */
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; }
 .card { background: rgba(15, 23, 42, 0.9); padding: 18px 18px 16px; border-radius: 14px; border: 1px solid rgba(148, 163, 184, 0.45); box-shadow: 0 18px 40px rgba(15, 23, 42, 0.65); position: relative; overflow: hidden; }
 .card::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.4), transparent 55%); opacity: 0.85; pointer-events: none; }
@@ -38,6 +57,8 @@ body { display: flex; min-height: 100vh; background: radial-gradient(circle at t
 .card-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #9ca3af; margin-bottom: 10px; }
 .card-value { font-size: 24px; font-weight: 600; color: #f9fafb; margin-bottom: 6px; }
 .card-sub { font-size: 11px; color: #a5b4fc; }
+
+/* ========== BẢNG TASK ========== */
 .table-container { background: rgba(15, 23, 42, 0.96); padding: 18px; border-radius: 16px; border: 1px solid rgba(148, 163, 184, 0.5); margin-top: 6px; }
 .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .table-header h2 { font-size: 16px; color: #e5e7eb; }
@@ -49,11 +70,13 @@ a.link-btn { color: #38bdf8; text-decoration: none; }
 a.link-btn:hover { text-decoration: underline; }
 .logout-link { color: #f87171; font-size: 13px; cursor: pointer; }
 .logout-link:hover { text-decoration: underline; }
+
+/* ========== RESPONSIVE: ẩn sidebar trên màn hẹp ========== */
 @media (max-width: 900px) { .sidebar { display: none; } .main { padding: 16px; } .header { flex-direction: column; align-items: flex-start; } }
 </style>
 </head>
 <body>
-
+<!-- ========== SIDEBAR: điều hướng nhanh ========== -->
 <div class="sidebar">
   <div class="sidebar-header">
     <div class="sidebar-logo"></div>
@@ -63,6 +86,7 @@ a.link-btn:hover { text-decoration: underline; }
     </div>
   </div>
   <ul class="sidebar-nav">
+    <!-- class="active": trang hiện tại; onclick chuyển sang dashboard -->
     <li class="active" onclick="window.location='user-dashboard.html'">
       <span class="label"><span class="nav-dot"></span><span>Dashboard</span></span>
       <span>●</span>
@@ -76,6 +100,7 @@ a.link-btn:hover { text-decoration: underline; }
     <li onclick="window.location='change-password.html'">
       <span class="label"><span class="nav-dot"></span><span>Đổi mật khẩu</span></span>
     </li>
+    <!-- Đăng xuất: JS gắn listener theo id logoutLi -->
     <li id="logoutLi">
       <span class="label"><span class="nav-dot"></span><span>Đăng xuất</span></span>
     </li>
@@ -83,6 +108,7 @@ a.link-btn:hover { text-decoration: underline; }
   <div class="sidebar-footer">User view · Data Labeling Support System</div>
 </div>
 
+<!-- ========== MAIN: header, thẻ số liệu, 2 bảng task ========== -->
 <div class="main">
   <div class="header">
     <div class="header-left">
@@ -90,6 +116,8 @@ a.link-btn:hover { text-decoration: underline; }
       <p>Xem task được giao và quản lý tài khoản</p>
     </div>
     <div class="header-right">
+      <!-- notifications.js sẽ render chuông thông báo vào đây -->
+      <div id="notificationBellContainer" class="notification-bell-wrap"></div>
       <div class="user-pill" id="userPill">
         <div class="user-avatar"></div>
         <div class="user-meta">
@@ -105,6 +133,7 @@ a.link-btn:hover { text-decoration: underline; }
     <div class="card">
       <div class="card-content">
         <div class="card-label">Task được giao</div>
+        <!-- Số tổng task (annotator + reviewer), cập nhật bởi loadAllTasks -->
         <div class="card-value" id="cardTaskCount">--</div>
         <div class="card-sub">
           <a href="annotator-tasks.html" class="link-btn">Task gán nhãn</a> ·
@@ -121,45 +150,65 @@ a.link-btn:hover { text-decoration: underline; }
     </div>
   </div>
 
+  <!-- Bảng 1: task gán nhãn (annotator), tbody do JS điền -->
   <div class="table-container">
     <div class="table-header">
       <h2>Task cần gán nhãn</h2>
       <a href="annotator-tasks.html" class="link-btn">Xem tất cả</a>
     </div>
     <table>
-      <thead><tr><th>Dự án</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+      <thead><tr><th>Dự án</th><th>Trạng thái</th><th>Deadline</th><th>Thao tác</th></tr></thead>
       <tbody id="annotatorTaskBody">
-        <tr><td colspan="3">Đang tải...</td></tr>
+        <tr><td colspan="4">Đang tải...</td></tr>
       </tbody>
     </table>
   </div>
+  <!-- Bảng 2: task review, tbody do JS điền -->
   <div class="table-container">
     <div class="table-header">
       <h2>Task cần review</h2>
       <a href="reviewer-tasks.html" class="link-btn">Xem tất cả</a>
     </div>
     <table>
-      <thead><tr><th>Dự án</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+      <thead><tr><th>Dự án</th><th>Trạng thái</th><th>Deadline</th><th>Thao tác</th></tr></thead>
       <tbody id="reviewerTaskBody">
-        <tr><td colspan="3">Đang tải...</td></tr>
+        <tr><td colspan="4">Đang tải...</td></tr>
       </tbody>
     </table>
   </div>
 </div>
 
+<!-- Cấu hình API (baseUrl, paths) -->
 <script src="api-config.js"></script>
+<!-- Hàm fetch có Bearer token, requireAuth, getToken... -->
 <script src="api-helper.js"></script>
+<!-- Chuông thông báo: NotificationBell.init -->
+<script src="notifications.js"></script>
 <script>
 (function() {
+  /* IIFE: tạo scope riêng, tránh biến toàn cục trùng tên */
+
+  // GET /api/users/me — thông tin user đăng nhập
+  // GET /api/tasks/annotator/:userId — task gán nhãn (phân trang)
+  // GET /api/tasks/reviewer/:userId — task review
+  // ADMIN/MANAGER bị chuyển sang trang quản trị; chỉ USER (annotator/reviewer) ở lại đây
   var API = window.API;
   var cfg = window.API_CONFIG;
+  // Nếu chưa đăng nhập, requireAuth() chuyển hướng login và return false → thoát script
   if (!API || !API.requireAuth()) return;
+  // Nếu module chuông tồn tại và có container, khởi tạo UI thông báo
+  if (window.NotificationBell && document.getElementById('notificationBellContainer')) {
+    window.NotificationBell.init(document.getElementById('notificationBellContainer'));
+  }
+  // Đọc vai trò hệ thống từ localStorage (đã lưu lúc login), chuẩn hóa HOA
   var role = (localStorage.getItem('systemRole') || '').toUpperCase();
+  // Admin/Manager không dùng dashboard user — chuyển đúng trang quản lý
   if (role === 'ADMIN' || role === 'MANAGER') {
     window.location.href = role === 'ADMIN' ? 'admin.html' : 'manager.html';
     return;
   }
 
+  /** Xóa session phía client và về trang đăng nhập */
   function logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
@@ -171,20 +220,36 @@ a.link-btn:hover { text-decoration: underline; }
   document.getElementById('logoutBtn').addEventListener('click', logout);
   document.getElementById('logoutLi').addEventListener('click', logout);
 
+  /**
+   * Gọi API lấy task annotator + reviewer, cập nhật thẻ đếm và 2 bảng (tối đa 5 dòng mỗi bảng).
+   * @param {string|null} uid - ID user (UUID/string) từ /me hoặc localStorage
+   */
   function loadAllTasks(uid) {
     if (!uid) {
-      document.getElementById('cardTaskCount').textContent = '0';
-      document.getElementById('annotatorTaskBody').innerHTML = '<tr><td colspan="3">Chưa có task nào được giao.</td></tr>';
-      document.getElementById('reviewerTaskBody').innerHTML = '<tr><td colspan="3">Chưa có task nào được giao.</td></tr>';
+      // Không có userId: không gọi API, hiển thị placeholder (colspan=4 khớp 4 cột bảng)
+      document.getElementById('annotatorTaskBody').innerHTML = '<tr><td colspan="4">Chưa có task nào được giao.</td></tr>';
+      document.getElementById('reviewerTaskBody').innerHTML = '<tr><td colspan="4">Chưa có task nào được giao.</td></tr>';
       return;
     }
+    /** Định dạng deadline: từ ISO hoặc chuỗi dài → hiển thị ngắn gọn */
+    function fmtDue(d) {
+      if (!d) return '--';
+      var s = String(d);
+      // Chuỗi kiểu 2025-01-01T12:30:00 → lấy ngày + giờ:phút
+      if (s.indexOf('T') !== -1) return s.substring(0, 10) + ' ' + s.substring(11, 16);
+      return s.length >= 16 ? s.substring(0, 16) : s;
+    }
+    // Trang 0, tối đa 20 phần tử mỗi loại (đủ cho preview + totalElements)
     var annotatorReq = API.fetchWithAuth(cfg.tasks + '/annotator/' + uid + '?page=0&size=20').then(function(r) { return r.json(); });
     var reviewerReq = API.fetchWithAuth(cfg.tasks + '/reviewer/' + uid + '?page=0&size=20').then(function(r) { return r.json(); });
+    // Chờ cả hai request xong rồi xử lý một lần
     Promise.all([annotatorReq, reviewerReq]).then(function(results) {
       var annotatorData = results[0] || {};
       var reviewerData = results[1] || {};
+      // Spring Page: content là mảng phần tử trang hiện tại
       var annotatorList = annotatorData.content || [];
       var reviewerList = reviewerData.content || [];
+      // totalElements: tổng trên mọi trang; fallback độ dài mảng nếu API không gửi
       var totalAnnotator = annotatorData.totalElements !== undefined ? annotatorData.totalElements : annotatorList.length;
       var totalReviewer = reviewerData.totalElements !== undefined ? reviewerData.totalElements : reviewerList.length;
       var total = totalAnnotator + totalReviewer;
@@ -192,38 +257,44 @@ a.link-btn:hover { text-decoration: underline; }
       var annotatorBody = document.getElementById('annotatorTaskBody');
       var reviewerBody = document.getElementById('reviewerTaskBody');
       if (annotatorList.length === 0) {
-        annotatorBody.innerHTML = '<tr><td colspan="3">Chưa có task cần gán nhãn.</td></tr>';
+        annotatorBody.innerHTML = '<tr><td colspan="4">Chưa có task cần gán nhãn.</td></tr>';
       } else {
+        // Chỉ hiển thị 5 dòng đầu trên dashboard; link kèm taskId query + sessionStorage backup
         annotatorBody.innerHTML = annotatorList.slice(0, 5).map(function(t) {
           var tid = t != null && (t.id != null || t.taskId != null) ? (typeof (t.id || t.taskId) === 'string' ? (t.id || t.taskId) : String(t.id || t.taskId)) : '';
           var safeTid = (tid || '').replace(/"/g, '&quot;');
-          return '<tr><td>' + (t.projectName || '') + '</td><td>' + (t.status || '') + '</td><td><a href="annotator-label.html?taskId=' + encodeURIComponent(tid) + '" class="link-btn" data-task-id="' + safeTid + '" onclick="sessionStorage.setItem(\'pendingTaskId\', this.getAttribute(\'data-task-id\'))">Gắn nhãn</a></td></tr>';
+          return '<tr><td>' + (t.projectName || '') + '</td><td>' + (t.status || '') + '</td><td>' + fmtDue(t.dueDate) + '</td><td><a href="annotator-label.html?taskId=' + encodeURIComponent(tid) + '" class="link-btn" data-task-id="' + safeTid + '" onclick="sessionStorage.setItem(\'pendingTaskId\', this.getAttribute(\'data-task-id\'))">Gắn nhãn</a></td></tr>';
         }).join('');
       }
       if (reviewerList.length === 0) {
-        reviewerBody.innerHTML = '<tr><td colspan="3">Chưa có task cần review.</td></tr>';
+        reviewerBody.innerHTML = '<tr><td colspan="4">Chưa có task cần review.</td></tr>';
       } else {
         reviewerBody.innerHTML = reviewerList.slice(0, 5).map(function(t) {
           var rid = t != null && (t.id != null || t.taskId != null) ? (typeof (t.id || t.taskId) === 'string' ? (t.id || t.taskId) : String(t.id || t.taskId)) : '';
           var safeRid = (rid || '').replace(/"/g, '&quot;');
-          return '<tr><td>' + (t.projectName || '') + '</td><td>' + (t.status || '') + '</td><td><a href="reviewer-task-review.html?taskId=' + encodeURIComponent(rid) + '" class="link-btn" data-task-id="' + safeRid + '" onclick="sessionStorage.setItem(\'pendingReviewTaskId\', this.getAttribute(\'data-task-id\'))">Review</a></td></tr>';
+          return '<tr><td>' + (t.projectName || '') + '</td><td>' + (t.status || '') + '</td><td>' + fmtDue(t.dueDate) + '</td><td><a href="reviewer-task-review.html?taskId=' + encodeURIComponent(rid) + '" class="link-btn" data-task-id="' + safeRid + '" onclick="sessionStorage.setItem(\'pendingReviewTaskId\', this.getAttribute(\'data-task-id\'))">Review</a></td></tr>';
         }).join('');
       }
     }).catch(function() {
+      // Lỗi mạng hoặc 401/500: đặt 0 và thông báo lỗi trong bảng
       document.getElementById('cardTaskCount').textContent = '0';
-      document.getElementById('annotatorTaskBody').innerHTML = '<tr><td colspan="3">Không tải được task.</td></tr>';
-      document.getElementById('reviewerTaskBody').innerHTML = '<tr><td colspan="3">Không tải được task.</td></tr>';
+      document.getElementById('annotatorTaskBody').innerHTML = '<tr><td colspan="4">Không tải được task.</td></tr>';
+      document.getElementById('reviewerTaskBody').innerHTML = '<tr><td colspan="4">Không tải được task.</td></tr>';
     });
   }
 
+  // Lấy profile hiện tại để biết email, username, id chuẩn
   API.fetchWithAuth(cfg.users + '/me').then(function(r) { return r.json(); }).then(function(me) {
-    document.getElementById('headerUsername').textContent = me.username || '--';
-    document.getElementById('headerEmail').textContent = me.email || '--';
-    document.getElementById('cardUsername').textContent = me.username || '--';
+   document.getElementById('headerUsername').textContent = me.username || '--';
+   document.getElementById('headerEmail').textContent = me.email || '--';
+   document.getElementById('cardUsername').textContent = me.username || '--';
+    // Ưu tiên id từ server; fallback localStorage nếu thiếu
     var uid = (me.id != null ? String(me.id) : null) || localStorage.getItem('userId');
+    // Đồng bộ userId vào localStorage nếu chưa có (các trang khác có thể dùng)
     if (me.id != null && !localStorage.getItem('userId')) localStorage.setItem('userId', String(me.id));
     loadAllTasks(uid);
   }).catch(function() {
+    // /me lỗi: vẫn thử tải task bằng userId đã lưu từ lần login trước
     loadAllTasks(localStorage.getItem('userId'));
   });
 })();

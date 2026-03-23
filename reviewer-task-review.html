@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!--
+  reviewer-task-review.html — Review chi tiết một task: duyệt/từ chối từng annotation, hoàn tất review.
+  API: task, annotations, review-feedbacks, POST feedback, PATCH .../complete-review.
+-->
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
@@ -97,6 +101,7 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
 <script src="api-helper.js"></script>
 <script>
 (function() {
+  // APIs: GET /api/tasks/:id; GET /api/annotations/task/:id; GET /api/review-feedbacks/task/:id; POST /api/review-feedbacks (duyệt/từ chối từng annotation); PATCH /api/tasks/:id/complete-review (hoàn tất review → cập nhật trạng thái task).
   var API = window.API;
   var cfg = window.API_CONFIG;
   var baseUrl = (cfg && cfg.baseUrl) ? cfg.baseUrl.replace(/\/$/, '') : 'http://localhost:8080';
@@ -203,7 +208,7 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
         var fullUrl = contentUrlFull(url);
         var isImg = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(url) || (fullUrl && fullUrl.indexOf('/api/uploads/') !== -1);
         var contentCell = isImg && fullUrl
-          ? '<img src="' + fullUrl.replace(/"/g, '&quot;') + '" alt="Nội dung" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'inline\';"><span style="display:none;color:#94a3b8;">Không tải ảnh</span>'
+          ? '<img src="' + fullUrl.replace(/"/g, '&quot;') + '" alt="Nội dung" onerror="this.style.display=\'none\'">'
           : (fullUrl ? '<a href="' + fullUrl.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">Xem nội dung</a>' : '<span style="color:#94a3b8;">—</span>');
         var id = (a.id != null ? a.id : '').toString().replace(/"/g, '&quot;');
         return '<tr data-annotation-id="' + id + '">' +
@@ -230,6 +235,26 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
       intro.textContent = 'Lỗi: ' + (err.message || 'Không tải được.');
       intro.style.color = '#f87171';
     });
+  }
+
+  function tryAutoCompleteReview() {
+    Promise.all([loadAnnotations(), loadReviewFeedbacks()]).then(function(results) {
+      var annotations = results[0] || [];
+      var feedbacks = results[1] || [];
+      var reviewedIds = {};
+      feedbacks.forEach(function(f) { if (f.annotationId) reviewedIds[f.annotationId] = true; });
+      var pending = annotations.filter(function(a) {
+        return (a.status === 'SUBMITTED' || a.status === 'Submitted') && !reviewedIds[a.id];
+      });
+      if (pending.length > 0 || annotations.length === 0) return;
+      API.fetchWithAuth(cfg.tasks + '/' + taskId + '/complete-review', { method: 'PATCH' }).then(function(r) {
+        if (r.ok) {
+          var msgEl = document.getElementById('msg');
+          if (msgEl) msgEl.textContent = 'Đã review xong tất cả. Trạng thái task đã cập nhật.';
+          render();
+        }
+      }).catch(function() {});
+    }).catch(function() {});
   }
 
   function submitReview(annotationId, approved, comment) {
@@ -263,6 +288,8 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
       msgEl.textContent = approved ? 'Đã duyệt.' : 'Đã từ chối.';
       msgEl.className = 'ok';
       render();
+      // Sau khi review xong một mục: nếu không còn annotation nào chờ review thì tự gọi complete-review để chuyển trạng thái task
+      tryAutoCompleteReview();
     }).catch(function(err) {
       msgEl.textContent = 'Lỗi: ' + (err.message || '');
       msgEl.className = 'err';

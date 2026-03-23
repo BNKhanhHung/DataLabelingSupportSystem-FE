@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!--
+  annotator-label.html — Màn gán nhãn theo taskId (query). Tải task, labels, items, annotations, feedbacks;
+  POST/PATCH annotations, PATCH submit task. Dùng cho annotator chỉnh sửa/nộp bài.
+-->
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
@@ -107,6 +111,7 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
 <script src="api-helper.js"></script>
 <script>
 (function() {
+  // APIs: GET /api/tasks/:id; GET /api/labels/project/:id; GET /api/tasks/:id/items; GET /api/annotations/task/:id; GET /api/review-feedbacks/task/:id; POST /api/annotations (tạo nhãn); PATCH /api/annotations/:id/content (sửa nhãn khi REJECTED); PATCH /api/tasks/:id/submit (nộp task).
   var API = window.API;
   var cfg = window.API_CONFIG;
   var baseUrl = (cfg && cfg.baseUrl) ? cfg.baseUrl.replace(/\/$/, '') : 'http://localhost:8080';
@@ -288,7 +293,7 @@ h1 { font-size: 22px; margin-bottom: 8px; color: #f1f5f9; }
       var contentCell = '';
       if (url) {
         if (isImageUrl(url)) {
-          contentCell = '<div class="content-cell"><img src="' + url.replace(/"/g, '&quot;') + '" alt="" onerror="this.parentElement.innerHTML=\'<span style="color:#94a3b8">Không tải ảnh</span>\'"></div>';
+          contentCell = '<div class="content-cell"><img src="' + url.replace(/"/g, '&quot;') + '" alt="" onerror="this.style.display=\'none\'"></div>';
         } else {
           contentCell = '<div class="content-cell"><a href="' + url.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">Mở nội dung</a></div>';
         }

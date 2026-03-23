@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!--
+  assign-task.html — Tạo task: chọn project, dataset, nhiều data item (NEW), annotator, reviewer, deadline (Flatpickr).
+  API: projects, datasets, data-items, users, POST task (theo backend).
+-->
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
@@ -15,6 +19,8 @@ a{color:#38bdf8}
 #dataItemList label{display:block;padding:6px 0;cursor:pointer}
 #msg{margin-top:12px;font-size:14px}
 </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
 </head>
 <body>
 
@@ -32,6 +38,9 @@ a{color:#38bdf8}
   <select id="annotatorId" required></select>
   <label>Reviewer *</label>
   <select id="reviewerId" required></select>
+  <label>Hạn hoàn thành (Deadline)</label>
+  <input type="text" id="dueDate" readonly placeholder="Bấm để chọn ngày và giờ" style="margin-top:4px;cursor:pointer;">
+  <small style="color:#94a3b8;font-size:12px;display:block;margin-top:4px;">Bấm vào ô để mở lịch và đồng hồ. Tùy chọn. Để trống nếu chưa xác định.</small>
   <button type="submit" id="btn">Tạo Task</button>
 </form>
 <p id="msg"></p>
@@ -39,11 +48,25 @@ a{color:#38bdf8}
 
 <script src="api-config.js"></script>
 <script src="api-helper.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
 <script>
 (function() {
+  // APIs: GET /api/projects; GET /api/users; GET /api/datasets/project/:id; GET /api/data-items/dataset/:id/status/NEW; POST /api/tasks (tạo task + gán data items).
   var API = window.API;
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;
+
+  flatpickr('#dueDate', {
+    enableTime: true,
+    time_24hr: true,
+    dateFormat: 'Y-m-d H:i',
+    allowInput: false,
+    locale: 'vn'
+  });
+  document.getElementById('dueDate').addEventListener('focus', function() {
+    this._flatpickr && this._flatpickr.open();
+  });
 
   var projectSelect = document.getElementById('projectId');
   var datasetSelect = document.getElementById('datasetId');
@@ -148,9 +171,12 @@ a{color:#38bdf8}
     btn.disabled = true;
     msg.textContent = 'Đang tạo task...';
     msg.style.color = '#94a3b8';
+    var payload = { projectId: projectId, annotatorId: annotatorId, reviewerId: reviewerId, dataItemIds: dataItemIds };
+    var dueDateVal = document.getElementById('dueDate').value.trim().replace(' ', 'T');
+    if (dueDateVal) payload.dueDate = dueDateVal;
     API.fetchWithAuth(cfg.tasks, {
       method: 'POST',
-      body: JSON.stringify({ projectId: projectId, annotatorId: annotatorId, reviewerId: reviewerId, dataItemIds: dataItemIds })
+      body: JSON.stringify(payload)
     }).then(function(res) {
       return res.json().then(function(data) {
         return { ok: res.ok, status: res.status, data: data };

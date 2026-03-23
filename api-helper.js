@@ -1,8 +1,14 @@
 /**
- * Helper gọi API backend với JWT. Cần load sau api-config.js.
+ * api-helper.js — Bọc fetch + JWT cho toàn frontend.
+ * Thứ tự script: api-config.js → api-helper.js → trang.
+ *
+ * - fetchWithAuth(path, options): nối URL, gắn Bearer, Content-Type/Accept JSON; 401 → xóa session + login.html.
+ * - requireAuth(): có token không; không thì redirect (dùng đầu script trang).
+ * - getBaseUrl / getToken / getJson / escapeHtml: tiện ích. Login không dùng fetchWithAuth (chưa có token).
  */
 (function() {
     function getBaseUrl() {
+        // Bỏ slash cuối baseUrl để nối path an toàn
         return (window.API_CONFIG && window.API_CONFIG.baseUrl) ? window.API_CONFIG.baseUrl.replace(/\/$/, '') : 'http://localhost:8080';
     }
 
@@ -18,8 +24,10 @@
      */
     function fetchWithAuth(path, options) {
         options = options || {};
+        // path tuyệt đối http* giữ nguyên; không thì baseUrl + path
         var url = path.indexOf('http') === 0 ? path : getBaseUrl() + (path.indexOf('/') === 0 ? path : '/' + path);
         var headers = options.headers || {};
+        // Không ghi đè nếu đã là Headers (FormData upload thường bỏ Content-Type để browser set boundary)
         if (typeof headers.append !== 'function' && !headers['Content-Type']) {
             headers['Content-Type'] = 'application/json';
         }
@@ -30,6 +38,7 @@
         }
         options.headers = headers;
         return fetch(url, options).then(function(res) {
+            // Token hết hạn / sai → dọn localStorage và đưa về login
             if (res.status === 401) {
                 localStorage.removeItem('token');
                 localStorage.removeItem('userId');

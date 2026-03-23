@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!--
+  annotator-tasks.html — Danh sách task IN_PROGRESS của annotator; nhận / từ chối.
+  API: GET /me, GET /api/tasks/annotator/:userId/in-progress, PATCH từ chối (mở lại task cho manager).
+-->
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
@@ -70,6 +74,14 @@ body {
   transition: opacity 0.2s, transform 0.1s;
 }
 .btn-start:hover { opacity: 0.95; transform: scale(1.02); }
+.btn-refuse {
+  padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 600;
+  background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.35);
+  cursor: pointer; white-space: nowrap;
+  transition: background 0.2s, transform 0.1s, opacity 0.2s;
+}
+.btn-refuse:hover { background: rgba(239, 68, 68, 0.22); transform: scale(1.02); opacity: 0.98; }
+.actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
 .card a.btn { padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 500; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; text-decoration: none; transition: opacity 0.2s, transform 0.1s; }
 .card a.btn:hover { opacity: 0.95; transform: scale(1.02); }
 .empty-state {
@@ -104,6 +116,10 @@ body {
 <script src="api-helper.js"></script>
 <script>
 (function() {
+  // APIs: GET /api/users/me;
+  // - GET /api/tasks/annotator/:userId/in-progress (task IN_PROGRESS được giao cho annotator)
+  // - GET /api/tasks/reviewer/:userId/in-progress (task IN_PROGRESS được giao cho reviewer)
+  // Danh sách task được giao của user (annotator + reviewer), link tới annotator-label hoặc reviewer-task-review.
   var API = window.API;
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;
@@ -129,8 +145,8 @@ body {
     }
     msgEl.textContent = 'Đang tải...';
     msgEl.style.color = '#94a3b8';
-    var annotatorReq = API.fetchWithAuth(cfg.tasks + '/annotator/' + uid + '?page=0&size=50').then(function(r) { return r.json(); });
-    var reviewerReq = API.fetchWithAuth(cfg.tasks + '/reviewer/' + uid + '?page=0&size=50').then(function(r) { return r.json(); });
+    var annotatorReq = API.fetchWithAuth(cfg.tasks + '/annotator/' + uid + '/in-progress?page=0&size=50').then(function(r) { return r.json(); });
+    var reviewerReq = API.fetchWithAuth(cfg.tasks + '/reviewer/' + uid + '/in-progress?page=0&size=50').then(function(r) { return r.json(); });
     Promise.all([annotatorReq, reviewerReq]).then(function(results) {
       var annotatorData = results[0] || {};
       var reviewerData = results[1] || {};
@@ -151,9 +167,59 @@ body {
         var link = isReview ? 'reviewer-task-review.html' : 'annotator-label.html';
         var btnText = isReview ? 'Vào review nhãn' : 'Bắt đầu gắn nhãn';
         var storageKey = isReview ? 'pendingReviewTaskId' : 'pendingTaskId';
-        return '<div class="card"><div><p><strong>' + (t.projectName || 'Project') + '</strong></p><p><span style="color:#94a3b8">' + label + '</span> · Task ID: ' + (t.id != null ? (typeof t.id === 'string' ? t.id : String(t.id)) : '') + ' · Trạng thái: ' + status + '</p></div><a href="' + link + '?taskId=' + encodeURIComponent(tid) + '" class="btn" data-task-id="' + safeTid + '" onclick="sessionStorage.setItem(\'' + storageKey + '\', this.getAttribute(\'data-task-id\'))">' + btnText + '</a></div>';
+        var canRefuse = (!isReview) && (status === 'OPEN' || status === 'IN_PROGRESS' || status === 'OVERDUE');
+        var refuseBtn = canRefuse
+          ? '<button type="button" class="btn-refuse btn-task-refuse" data-task-id="' + safeTid + '">Từ chối</button>'
+          : '';
+        var actionHtml =
+          '<div class="actions">' +
+            '<a href="' + link + '?taskId=' + encodeURIComponent(tid) + '" class="btn" data-task-id="' + safeTid + '" onclick="sessionStorage.setItem(\'' + storageKey + '\', this.getAttribute(\'data-task-id\'))">' + btnText + '</a>' +
+            refuseBtn +
+          '</div>';
+        return '<div class="card"><div><p><strong>' + (t.projectName || 'Project') + '</strong></p><p><span style="color:#94a3b8">' + label + '</span> · Task ID: ' + (t.id != null ? (typeof t.id === 'string' ? t.id : String(t.id)) : '') + ' · Trạng thái: ' + status + '</p></div>' + actionHtml + '</div>';
       }).join('');
       listEl.innerHTML = html;
+
+      // Bind refuse buttons
+      listEl.querySelectorAll('.btn-task-refuse').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var taskId = btn.getAttribute('data-task-id');
+          var reason = window.prompt('Nhập lý do từ chối (tối thiểu 10 ký tự):', '');
+          if (reason == null) return;
+          reason = String(reason || '').trim();
+          if (reason.length < 10) {
+            alert('Lý do phải có ít nhất 10 ký tự.');
+            return;
+          }
+          btn.disabled = true;
+          btn.textContent = 'Đang gửi...';
+          API.fetchWithAuth(cfg.tasks + '/' + encodeURIComponent(taskId) + '/refuse', {
+            method: 'PATCH',
+            body: JSON.stringify({ reason: reason })
+          }).then(function(r) {
+            // Một số lỗi có thể trả body rỗng hoặc không phải JSON → parse an toàn
+            return r.text().then(function(txt) {
+              var data = null;
+              if (txt) {
+                try { data = JSON.parse(txt); } catch (e) { data = { message: txt }; }
+              }
+              if (!r.ok) {
+                throw new Error((data && (data.message || data.error)) || ('HTTP ' + r.status));
+              }
+              return data || {};
+            });
+          }).then(function() {
+            msgEl.textContent = 'Đã từ chối task. Task đã trả về trạng thái OPEN để manager phân công lại.';
+            msgEl.style.color = '#fbbf24';
+            ensureUserId(function(uid2) { loadTasks(uid2); });
+          }).catch(function(err) {
+            alert('Lỗi từ chối task: ' + (err.message || ''));
+          }).finally(function() {
+            btn.disabled = false;
+            btn.textContent = 'Từ chối';
+          });
+        });
+      });
     }).catch(function(err) {
       msgEl.textContent = 'Lỗi: ' + (err.message || '');
       msgEl.style.color = '#f87171';

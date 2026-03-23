@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+<!--
+  login.html — Đăng nhập.
+  - Nếu đã có token: redirect admin / manager / user-dashboard theo systemRole.
+  - Form: POST JSON tới API_CONFIG.baseUrl + loginPath (usernameOrEmail, password).
+  - Không dùng API.fetchWithAuth (chưa có JWT). Lưu token + user vào localStorage khi thành công.
+-->
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
@@ -9,9 +15,9 @@
     var token = localStorage.getItem('token');
     if (token) {
         var systemRole = (localStorage.getItem('systemRole') || '').toUpperCase();
-        if (systemRole === 'ADMIN') window.location.replace('admin.html');
-        else if (systemRole === 'MANAGER') window.location.replace('manager.html');
-        else window.location.replace('user-dashboard.html');
+        if (systemRole === 'ADMIN') window.location.replace('/admin.html');
+        else if (systemRole === 'MANAGER') window.location.replace('/manager.html');
+        else window.location.replace('/user-dashboard.html');
     }
 })();
 </script>
@@ -198,6 +204,7 @@ body {
 <script src="api-config.js"></script>
 <script>
 (function() {
+    // API: POST api/auth/login (fetch trực tiếp, không dùng fetchWithAuth). Sau khi đăng nhập thành công redirect theo role: ADMIN→admin.html, MANAGER→manager.html, USER→user-dashboard.html.
     var API_CONFIG = window.API_CONFIG || {
         baseUrl: 'http://localhost:8080',
         loginPath: '/api/auth/login'
@@ -273,7 +280,7 @@ body {
                     if (data.systemRole) localStorage.setItem('systemRole', data.systemRole);
                 }
                 var role = (data.systemRole || '').toUpperCase();
-                var redirectUrl = role === 'ADMIN' ? 'admin.html' : (role === 'MANAGER' ? 'manager.html' : 'user-dashboard.html');
+                var redirectUrl = role === 'ADMIN' ? '/admin.html' : (role === 'MANAGER' ? '/manager.html' : '/user-dashboard.html');
                 window.location.href = redirectUrl;
             } else {
                 var msg = (result.data && (result.data.message || result.data.error)) || 'Đăng nhập thất bại. Vui lòng kiểm tra lại.';

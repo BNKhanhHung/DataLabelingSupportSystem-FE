@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!--
+  reviewer-tasks.html — Task cần reviewer xử lý. GET /me (userId), GET /api/tasks/reviewer/:userId.
+  Link sang reviewer-task-review.html?taskId=...
+-->
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
@@ -37,6 +41,7 @@ h2 { margin-bottom: 12px; font-size: 20px; }
 <script src="api-helper.js"></script>
 <script>
 (function() {
+  // APIs: GET /api/users/me; GET /api/tasks/reviewer/:userId. Danh sách task cần review, link tới reviewer-task-review.html?taskId=...
   var API = window.API;
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;
