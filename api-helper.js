@@ -74,6 +74,13 @@
     }
 
     /**
+     * Backward-compatible alias cho các trang cũ đang gọi API.safeJson(...)
+     */
+    function safeJson(res) {
+        return getJson(res);
+    }
+
+    /**
      * Escape HTML special characters to prevent XSS attacks
      */
     function escapeHtml(text) {
@@ -94,6 +101,7 @@
         fetchWithAuth: fetchWithAuth,
         requireAuth: requireAuth,
         getJson: getJson,
+        safeJson: safeJson,
         escapeHtml: escapeHtml
     };
 })();
