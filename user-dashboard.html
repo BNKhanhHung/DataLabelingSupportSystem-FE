@@ -285,9 +285,9 @@ a.link-btn:hover { text-decoration: underline; }
 
   // Lấy profile hiện tại để biết email, username, id chuẩn
   API.fetchWithAuth(cfg.users + '/me').then(function(r) { return r.json(); }).then(function(me) {
-    document.getElementById('headerUsername').textContent = me.username || '--';
-    document.getElementById('headerEmail').textContent = me.email || '--';
-    document.getElementById('cardUsername').textContent = me.username || '--';
+   document.getElementById('headerUsername').textContent = me.username || '--';
+   document.getElementById('headerEmail').textContent = me.email || '--';
+   document.getElementById('cardUsername').textContent = me.username || '--';
     // Ưu tiên id từ server; fallback localStorage nếu thiếu
     var uid = (me.id != null ? String(me.id) : null) || localStorage.getItem('userId');
     // Đồng bộ userId vào localStorage nếu chưa có (các trang khác có thể dùng)

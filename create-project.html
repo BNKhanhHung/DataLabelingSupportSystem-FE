@@ -1,7 +1,17 @@
 <!DOCTYPE html>
 <!--
-  create-project.html — Tạo dự án mới (manager). POST /api/projects (name, description, deadline).
-  Flatpickr chọn ngày/giờ deadline (tùy chọn).
+  create-project.html
+  ───────────────────
+  Mục đích: Form tạo dự án (Project) mới cho Manager.
+  Điều hướng: Sau khi tạo thành công, ~1.5s chuyển manager.html.
+
+  Phụ thuộc JS ngoài: Flatpickr (CDN) — lịch + giờ 24h, locale tiếng Việt.
+  API: POST /api/projects
+  Body JSON: { name (bắt buộc), description (chuỗi, có thể rỗng), deadline? }
+  - deadline: nếu user chọn trong Flatpickr, chuỗi "Y-m-d H:i" được đổi khoảng trắng giữa ngày/giờ thành "T"
+    để gần với ISO (backend parse LocalDateTime tùy cấu hình).
+
+  Phân quyền: requireAuth() — user đã đăng nhập; thường chỉ manager vào trang này (không chặn role ở FE).
 -->
 <html lang="vi">
 <head>
@@ -9,6 +19,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tạo Project - Data Labeling</title>
 <style>
+/* Reset + nền gradient tối */
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
 body {
   min-height: 100vh;
@@ -85,6 +96,7 @@ body {
       </div>
       <div class="form-group">
         <label for="deadline">Hạn hoàn thành (Deadline)</label>
+        <!-- readonly: chỉ chọn qua Flatpickr, không gõ tay (allowInput: false) -->
         <input type="text" id="deadline" readonly placeholder="Bấm để chọn ngày và giờ" style="cursor:pointer;">
         <small style="color:#94a3b8;font-size:12px;display:block;margin-top:6px;">Bấm vào ô để mở lịch và đồng hồ. Tùy chọn. Để trống nếu chưa xác định.</small>
       </div>
@@ -102,11 +114,11 @@ body {
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
 <script>
 (function() {
-  // API: POST /api/projects (tạo dự án: name, description, deadline).
   var API = window.API;
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;
 
+  /* Flatpickr: datetime 24h, định dạng hiển thị Y-m-d H:i; mở picker khi focus ô deadline */
   flatpickr('#deadline', {
     enableTime: true,
     time_24hr: true,
@@ -128,6 +140,7 @@ body {
     btn.disabled = true;
     msg.textContent = 'Đang tạo...';
     msg.style.color = '#94a3b8';
+    /* Chuẩn hóa deadline: thay khoảng trắng giữa ngày và giờ bằng 'T' (gần ISO-8601) nếu có giá trị */
     var deadlineInput = document.getElementById('deadline').value.trim().replace(' ', 'T');
     var payload = { name: name, description: document.getElementById('description').value.trim() || '' };
     if (deadlineInput) payload.deadline = deadlineInput;

@@ -1,7 +1,21 @@
 <!DOCTYPE html>
 <!--
-  user-management.html — CRUD người dùng (admin/manager). Query ?from=admin|manager đổi link quay lại.
-  API: GET/PUT/DELETE/POST /api/users.
+  user-management.html
+  ─────────────────────
+  Mục đích: Trang quản trị danh sách user — tạo mới (POST), sửa (PUT), xóa (DELETE), xem cảnh báo trễ (warnings).
+  Phân quyền: Chỉ ADMIN hoặc MANAGER; user thường bị chuyển về user-dashboard.html.
+
+  Query string:
+  - ?from=manager → nút "Về Dashboard" trỏ manager.html (ưu tiên cùng với role MANAGER).
+  - Không có hoặc from=admin → backUrl = admin.html (mặc định cho admin).
+
+  API (baseUrl từ api-config.js, gọi qua API.fetchWithAuth):
+  - GET  /api/users?page=0&size=200 — danh sách phân trang (Spring Page: content[], totalElements).
+  - POST /api/users — body { username, email, password, status, systemRole }.
+  - PUT  /api/users/:id — body { username, email, status, systemRole, password? }; password chỉ gửi khi đổi (≥6 ký tự).
+  - DELETE /api/users/:id — xóa user (cần xác nhận confirm).
+
+  Lưu ý an toàn: Chuỗi hiển thị bảng dùng API.escapeHtml; data-user trên nút Sửa chứa JSON — parse trong click handler.
 -->
 <html lang="vi">
 <head>
@@ -9,6 +23,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quản lý người dùng - Data Labeling</title>
 <style>
+/* Reset + nền toàn trang */
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
 body { background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 24px; }
 .wrap { max-width: 1000px; margin: 0 auto; }
@@ -16,6 +31,8 @@ h1 { font-size: 22px; margin-bottom: 20px; }
 a { color: #38bdf8; text-decoration: none; }
 a:hover { text-decoration: underline; }
 .back { display: inline-block; margin-bottom: 20px; }
+
+/* Khối card: form tạo user + bảng danh sách */
 .card { background: #1e293b; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #334155; }
 .card h2 { font-size: 16px; margin-bottom: 16px; color: #f1f5f9; }
 table { width: 100%; border-collapse: collapse; }
@@ -30,14 +47,20 @@ button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; f
 .btn-danger { background: #dc2626; color: #fff; }
 .btn-small { padding: 4px 10px; font-size: 12px; margin-right: 6px; }
 #msg { margin-top: 12px; font-size: 14px; }
+
+/* Lưới 2 cột cho form tạo — mobile 1 cột */
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } }
+
+/* Badge vai trò + màu trạng thái */
 .role-badge { padding: 2px 8px; border-radius: 999px; font-size: 11px; }
 .role-ADMIN { background: #7f1d1d; color: #fecaca; }
 .role-MANAGER { background: #1e3a8a; color: #bfdbfe; }
 .role-USER { background: #14532d; color: #bbf7d0; }
 .status-ACTIVE { color: #4ade80; }
 .status-INACTIVE { color: #f87171; }
+
+/* Modal sửa: lớp phủ fullscreen + hộp giữa */
 .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 100; padding: 20px; }
 .modal.show { display: flex; }
 .modal-inner { background: #1e293b; padding: 24px; border-radius: 12px; max-width: 440px; width: 100%; border: 1px solid #334155; }
@@ -46,9 +69,11 @@ button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; f
 </head>
 <body>
 <div class="wrap">
+  <!-- href được gán bằng JS: admin.html hoặc manager.html -->
   <a href="#" id="backLink" class="back">← Về Dashboard</a>
   <h1>Quản lý người dùng</h1>
 
+  <!-- ─── Card 1: Tạo user mới (POST) ─── -->
   <div class="card">
     <h2>Thêm người dùng</h2>
     <form id="formCreate">
@@ -88,6 +113,7 @@ button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; f
     <p id="msgCreate"></p>
   </div>
 
+  <!-- ─── Card 2: Bảng user — render bằng loadUsers() ─── -->
   <div class="card">
     <h2>Danh sách người dùng</h2>
     <p id="tableCount" style="font-size:13px;color:#94a3b8;margin-bottom:12px;">Đang tải...</p>
@@ -102,6 +128,7 @@ button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; f
   </div>
 </div>
 
+<!-- Modal chỉnh sửa: mở bằng openEdit(), đóng bằng Hủy hoặc sau khi Lưu thành công -->
 <div class="modal" id="modalEdit">
   <div class="modal-inner">
     <h3>Sửa người dùng</h3>
@@ -137,20 +164,30 @@ button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; f
 <script src="api-helper.js"></script>
 <script>
 (function() {
-  // APIs: GET /api/users?page&size; PUT /api/users/:id (sửa user); DELETE /api/users/:id; POST /api/users (tạo user). Back link: manager.html nếu from=manager hoặc role MANAGER, else admin.html.
+  /* IIFE: cô lập biến, không làm bẩn window */
+
   var API = window.API;
   var cfg = window.API_CONFIG;
   if (!API || !API.requireAuth()) return;
+
+  /* Chỉ admin/manager được xem trang này */
   var role = (localStorage.getItem('systemRole') || '').toUpperCase();
   if (role !== 'ADMIN' && role !== 'MANAGER') {
     window.location.href = 'user-dashboard.html';
     return;
   }
+
+  /* Quyết định link "Về Dashboard": ưu tiên ?from=manager hoặc user hiện tại là MANAGER → manager.html, ngược lại admin.html */
   var params = new URLSearchParams(window.location.search);
   var from = params.get('from');
   var backUrl = (from === 'manager' || role === 'MANAGER') ? 'manager.html' : 'admin.html';
   document.getElementById('backLink').href = backUrl;
 
+  /**
+   * Tải trang đầu user (size=200), cập nhật #tableCount và render tbody.
+   * Mỗi dòng: escape HTML cho text; nút Sửa lưu JSON user vào data-user (parse khi click).
+   * Nút Xóa: confirm rồi DELETE /api/users/:id
+   */
   function loadUsers() {
     API.fetchWithAuth(cfg.users + '?page=0&size=200').then(function(r) { return r.json(); }).then(function(data) {
       var list = data.content || [];
@@ -170,10 +207,13 @@ button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; f
         var username = API.escapeHtml(u.username || '');
         var email = API.escapeHtml(u.email || '');
         var role = API.escapeHtml(r);
+        /* warnings: số lần vi phạm trễ hạn (từ backend User entity) */
         var warnings = (u.warnings != null ? Number(u.warnings) : 0);
         var userId = API.escapeHtml(String(u.id || ''));
+        /* data-user: JSON string — username/email gốc (chưa escape) để điền form sửa */
         return '<tr><td>' + username + '</td><td>' + email + '</td><td><span class="status-' + st + '">' + API.escapeHtml(st) + '</span></td><td><span class="role-badge ' + roleClass + '">' + role + '</span></td><td>' + warnings + '</td><td><button type="button" class="btn-small btn-secondary edit-btn" data-user="' + API.escapeHtml(JSON.stringify({id: u.id, username: u.username, email: u.email, status: u.status, systemRole: r})) + '">Sửa</button><button type="button" class="btn-small btn-danger delete-btn" data-id="' + userId + '">Xóa</button></td></tr>';
       }).join('');
+      /* Gắn listener sau khi innerHTML — event delegation cũng được nhưng code dùng forEach rõ ràng */
       tbody.querySelectorAll('button.edit-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
           try {
@@ -195,6 +235,7 @@ button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; f
     });
   }
 
+  /** Điền form modal + hiện #modalEdit */
   function openEdit(id, username, email, status, systemRole) {
     document.getElementById('e_id').value = id;
     document.getElementById('e_username').value = username || '';
@@ -210,6 +251,7 @@ button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; f
     document.getElementById('modalEdit').classList.remove('show');
   });
 
+  /** PUT /api/users/:id — chỉ thêm field password vào payload nếu user nhập ≥6 ký tự */
   document.getElementById('formEdit').addEventListener('submit', function(e) {
     e.preventDefault();
     var id = document.getElementById('e_id').value;
@@ -244,6 +286,7 @@ button { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; f
     });
   }
 
+  /** POST /api/users — tạo xong reset ô nhập và gọi lại loadUsers() */
   document.getElementById('formCreate').addEventListener('submit', function(e) {
     e.preventDefault();
     var msg = document.getElementById('msgCreate');
